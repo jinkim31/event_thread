@@ -1,1 +1,0 @@
-/usr/bin/c++     CMakeFiles/test.dir/testcode/main.cpp.o CMakeFiles/test.dir/testcode/firstThread.cpp.o CMakeFiles/test.dir/testcode/secondThread.cpp.o  -o test  libevent_thread.a -pthread 

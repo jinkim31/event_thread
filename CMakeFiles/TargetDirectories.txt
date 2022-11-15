@@ -1,4 +1,0 @@
-/home/ansur/Desktop/projects/multithread/CMakeFiles/rebuild_cache.dir
-/home/ansur/Desktop/projects/multithread/CMakeFiles/edit_cache.dir
-/home/ansur/Desktop/projects/multithread/CMakeFiles/test.dir
-/home/ansur/Desktop/projects/multithread/CMakeFiles/event_thread.dir
