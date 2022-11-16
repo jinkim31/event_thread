@@ -1,7 +1,6 @@
 #ifndef TESTTHREAD_H
 #define TESTTHREAD_H
 
-#include <iostream>
 #include "../event_thread/eventThread.h"
 
 class FirstThread : public EventThread

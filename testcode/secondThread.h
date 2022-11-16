@@ -3,8 +3,6 @@
 
 #include "../event_thread/eventThread.h"
 
-
-
 class SecondThread : public EventThread
 {
 public:

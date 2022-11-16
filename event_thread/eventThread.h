@@ -49,7 +49,7 @@ void EventThread::callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args)
 template<typename EThreadType, class... Args>
 void EventThread::callInterthread(void(EThreadType::* func)(Args...), Args... args)
 {
-    for(const auto ethreadPtr : EventThread::ethreads)
+    for(const auto& ethreadPtr : EventThread::ethreads)
     {
         if(typeid(*ethreadPtr) == typeid(EThreadType))
         {
