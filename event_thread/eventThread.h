@@ -90,9 +90,7 @@ void ethr::EventThread::callInterthread(void(EThreadType::* func)(Args...), Args
 {
     for(const auto& ethreadPtr : EventThread::ethreads)
     {   if(typeid(*ethreadPtr) == typeid(EThreadType))
-        {
             callQueued((EThreadType*)ethreadPtr, func, args...);
-        }
     }
 }
 

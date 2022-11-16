@@ -16,12 +16,12 @@ ethr::EventThread::~EventThread()
 {
     /*
      * stop() should be called explicitly befor thread destruction.
-     * crashes like following will occur:
+     * otherwise crashes like following will occur:
      *
      * pure virtual method called
      * terminate called without an active exception
      *
-     * stop() here in the destructor is here just in case and not a safe method for thread termination
+     * stop() is here just in case and it's not safe to terminate a thread with it
      * since the derived class implementing vitual void task() is destructed prior to EventThread itself.
      */
     stop();
