@@ -15,5 +15,4 @@ void SecondThread::secondEventCallback(std::string str)
 void SecondThread::task()
 {
     EventThread::callInterthread(&FirstThread::firstEventCallback, std::string("hello from second thread"));
-    usleep(100000);
 }
