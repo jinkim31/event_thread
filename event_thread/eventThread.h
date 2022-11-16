@@ -53,27 +53,91 @@ public:
 
     ~EventThread();
 
+    /**
+     * @brief Start thread.
+     * 
+     */
     void start();
 
+    /**
+     * @brief Stop thread. This should be called before EventThread destruction.
+     * 
+     */
     void stop();
 
+    /**
+     * @brief Set the sched attributes.
+     * 
+     * @param attr 
+     */
     void setSched(SchedAttr& attr);
 
+    /**
+     * @brief Set the loop period in nanoseconds.
+     * 
+     * @param nsecPeriod 
+     */
     void setLoopPeriod(uint64_t nsecPeriod);
 
+    /**
+     * @brief Set the loop frequency in Hz.
+     * 
+     * @param freq 
+     */
     void setLoopFreq(double freq);
 
+    /**
+     * @brief Set the event handling scheme. 
+     * 
+     * @param scheme 
+     *  AFTER_TASK: handles event after task() execution
+     *  BEFORE_TASK: handles event before task() execution
+     *  USER_EXPLICIT: event handling is triggered when user explicitly calls handleQueuedEvents()
+     */
     void setEventHandleScheme(EventHandleScheme scheme);
 
+    /**
+     * @brief Manipulate shared resource.
+     * 
+     * @tparam SharedResourceType 
+     * @param manipulator std::function<void(SharedResourceType&)> type functor used to manipulate shared resource.
+     */
     template<typename SharedResourceType>
     void manipulateSharedResource(const std::function<void(SharedResourceType&)>& manipulator);
 
+    /**
+     * @brief Add new event to thread event queue.
+     * 
+     * @tparam ObjPtr
+     * @tparam FuncPtr
+     * @tparam Args
+     * @param objPtr ObjPtr EventThread object pointer to add event to
+     * @param funcPtr event function pointer
+     * @param args event function pointer arguments
+     */
     template<typename ObjPtr, typename FuncPtr, class... Args>
     static void callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args);
 
+    /**
+     * @brief Call interthread events. Several events may be called if multiple instance of EthreadType exists.
+     * 
+     * @tparam EthreadType 
+     * @tparam Args 
+     * @param func EventThread event function pointer
+     * @param args EventThread event function arguments
+     */
     template<typename EthreadType, class... Args>
     static void callInterthread(void(EthreadType::* func)(Args...), Args... args);
 
+    /**
+     * @brief Call interthread events of specific thread.
+     * 
+     * @tparam EthreadType 
+     * @tparam Args 
+     * @param ref ThreadRef of desired EventThread
+     * @param func EventThread event function pointer
+     * @param args EventThread event function arguments
+     */
     template<typename EthreadType, class... Args>
     static void callInterthread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args);
 
@@ -177,10 +241,7 @@ void ethr::EventThread::callInterthread(void(EthreadType::* func)(Args...), Args
 template<typename EthreadType, class... Args>
 void ethr::EventThread::callInterthread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args)
 {
-    if(typeid(*ref.mRef) == typeid(EthreadType))
-    {
-        callQueued((EthreadType*)ref.mRef, func, args...);
-    }
+    callQueued((EthreadType*)ref.mRef, func, args...);
 }
 
 #endif
