@@ -3,7 +3,7 @@
 
 #include "../event_thread/eventThread.h"
 
-class FirstThread : public EventThread
+class FirstThread : public ethr::EventThread
 {
 public:
     FirstThread();

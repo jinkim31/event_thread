@@ -1,8 +1,8 @@
 #include "eventThread.h"
 
-std::vector<EventThread*> EventThread::ethreads;
+std::vector<ethr::EventThread*> ethr::EventThread::ethreads;
 
-EventThread::EventThread()
+ethr::EventThread::EventThread()
 {
     mEventQueueSize = 1000;
     mIsSchedAttrAvailable = false;
@@ -11,7 +11,7 @@ EventThread::EventThread()
     ethreads.push_back(this);
 }
 
-EventThread::~EventThread()
+ethr::EventThread::~EventThread()
 {
     /*
      * stop() should be called explicitly befor thread destruction.
@@ -26,31 +26,31 @@ EventThread::~EventThread()
     stop();
 }
 
-bool EventThread::checkLoopRunningSafe()
+bool ethr::EventThread::checkLoopRunningSafe()
 {
     std::unique_lock<std::mutex> lock(mMutexLoop);
     return mIsLoopRunning;
 }
 
-void EventThread::setLoopPeriod(uint64_t nsecPeriod)
+void ethr::EventThread::setLoopPeriod(uint64_t nsecPeriod)
 {
     if(checkLoopRunningSafe()) return;
     mLoopPeriod = nsecPeriod;
 }
 
-void EventThread::setLoopFreq(double freq)
+void ethr::EventThread::setLoopFreq(double freq)
 {
     if(checkLoopRunningSafe()) return;
     mLoopPeriod = NSEC_PER_SEC / freq;
 }
 
-void EventThread::start()
+void ethr::EventThread::start()
 {
     if(checkLoopRunningSafe()) return;
     pthread_create(&mPthread, NULL, EventThread::threadEntryPoint, this);
 }
 
-void EventThread::stop()
+void ethr::EventThread::stop()
 {
     mMutexLoop.lock();
     mIsLoopRunning = false;
@@ -59,13 +59,13 @@ void EventThread::stop()
     pthread_join(mPthread, &ret);
 }
 
-void EventThread::queueNewEvent(const std::function<void ()> &func)
+void ethr::EventThread::queueNewEvent(const std::function<void ()> &func)
 {
     std::unique_lock<std::mutex> lock(mMutexEvent);
     if(mEventQueue.size() < mEventQueueSize) mEventQueue.push(func);
 }
 
-void *EventThread::threadEntryPoint(void *param)
+void *ethr::EventThread::threadEntryPoint(void *param)
 {
     EventThread* ethreadPtr = (EventThread*)param;
     ethreadPtr->mTid = gettid();
@@ -78,7 +78,7 @@ void *EventThread::threadEntryPoint(void *param)
     return nullptr;
 }
 
-void EventThread::handleQueuedEvents()
+void ethr::EventThread::handleQueuedEvents()
 {
     while(!mEventQueue.empty() && checkLoopRunningSafe())
     {
@@ -93,7 +93,7 @@ void EventThread::handleQueuedEvents()
     }
 }
 
-void EventThread::runLoop()
+void ethr::EventThread::runLoop()
 {
     std::unique_lock<std::mutex> lock(mMutexLoop);
     mIsLoopRunning = true;
@@ -108,7 +108,7 @@ void EventThread::runLoop()
     }
 }
 
-void EventThread::setSched(SchedAttr& attr)
+void ethr::EventThread::setSched(SchedAttr& attr)
 {
     if(checkLoopRunningSafe()) return;
     attr.size = sizeof(SchedAttr);
@@ -116,7 +116,7 @@ void EventThread::setSched(SchedAttr& attr)
     mIsSchedAttrAvailable = true;
 }
 
-void EventThread::timespecForward(timespec* ts, int64_t nsecTime)
+void ethr::EventThread::timespecForward(timespec* ts, int64_t nsecTime)
 {
     int64_t sec, nsec;
 

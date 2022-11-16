@@ -17,6 +17,9 @@
 #define events public
 #define NSEC_PER_SEC 1000000000
 
+namespace ethr
+{
+
 class EventThread
 {
 public:
@@ -65,14 +68,16 @@ private:
     static void timespecForward(timespec* ts, int64_t nsecTime);
 };
 
+}
+
 template<typename ObjPtr, typename FuncPtr, class... Args>
-void EventThread::callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args)
+void ethr::EventThread::callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args)
 {
     ((EventThread*)objPtr)->queueNewEvent(std::bind(funcPtr, objPtr, args...));
 }
 
 template<typename EThreadType, class... Args>
-void EventThread::callInterthread(void(EThreadType::* func)(Args...), Args... args)
+void ethr::EventThread::callInterthread(void(EThreadType::* func)(Args...), Args... args)
 {
     for(const auto& ethreadPtr : EventThread::ethreads)
     {
@@ -83,4 +88,5 @@ void EventThread::callInterthread(void(EThreadType::* func)(Args...), Args... ar
         }
     }
 }
+
 #endif
