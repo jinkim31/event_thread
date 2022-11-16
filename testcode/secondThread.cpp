@@ -4,7 +4,7 @@
 
 SecondThread::SecondThread()
 {
-
+    setEventHandleScheme(ethr::EventThread::EventHandleScheme::USER_EXPLICIT);
 }
 
 void SecondThread::secondEventCallback(std::string str)
@@ -15,4 +15,5 @@ void SecondThread::secondEventCallback(std::string str)
 void SecondThread::task()
 {
     ethr::EventThread::callInterthread(&FirstThread::firstEventCallback, std::string("hello from second thread"));
+    handleQueuedEvents();
 }

@@ -23,6 +23,13 @@ namespace ethr
 class EventThread
 {
 public:
+    enum class EventHandleScheme
+    {
+        AFTER_TASK,
+        BEFORE_TASK,
+        USER_EXPLICIT,
+    };
+
     struct SchedAttr
     {
         __u32 size;
@@ -42,13 +49,15 @@ public:
     void setSched(SchedAttr& attr);
     void setLoopPeriod(uint64_t nsecPeriod);
     void setLoopFreq(double freq);
+    void setEventHandleScheme(EventHandleScheme scheme);
     template<typename ObjPtr, typename FuncPtr, class... Args>
     static void callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args);
     template<typename EThreadType, class... Args>
     static void callInterthread(void(EThreadType::* func)(Args...), Args... args);
 protected:
-    virtual void task()=0;
     pid_t mPid, mTid;
+    virtual void task()=0;
+    void handleQueuedEvents();
 private:
     pthread_t mPthread;
     std::mutex mMutexLoop, mMutexEvent;
@@ -59,8 +68,8 @@ private:
     int64_t mLoopPeriod;
     bool mIsSchedAttrAvailable;
     bool mIsLoopRunning;
+    EventHandleScheme mEventHandleScheme;
     bool checkLoopRunningSafe();
-    void handleQueuedEvents();
     void queueNewEvent(const std::function<void ()> &func);
     void runLoop();
     static void* threadEntryPoint(void* param);

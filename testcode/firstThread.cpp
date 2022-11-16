@@ -4,7 +4,7 @@
 
 FirstThread::FirstThread()
 {
-
+    setEventHandleScheme(ethr::EventThread::EventHandleScheme::BEFORE_TASK);
 }
 
 void FirstThread::firstEventCallback(std::string str)

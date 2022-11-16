@@ -7,6 +7,7 @@ ethr::EventThread::EventThread()
     mEventQueueSize = 1000;
     mIsSchedAttrAvailable = false;
     mIsLoopRunning = false;
+    mEventHandleScheme = EventHandleScheme::AFTER_TASK;
     mLoopPeriod = 0;
     ethreads.push_back(this);
 }
@@ -42,6 +43,12 @@ void ethr::EventThread::setLoopFreq(double freq)
 {
     if(checkLoopRunningSafe()) return;
     mLoopPeriod = NSEC_PER_SEC / freq;
+}
+
+void ethr::EventThread::setEventHandleScheme(EventHandleScheme scheme)
+{
+    if(checkLoopRunningSafe()) return;
+    mEventHandleScheme = scheme;
 }
 
 void ethr::EventThread::start()
@@ -103,8 +110,27 @@ void ethr::EventThread::runLoop()
     {
         clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &mNextTaskTime, NULL);
         timespecForward(&mNextTaskTime, mLoopPeriod);
-        task();
-        handleQueuedEvents();
+
+        switch(mEventHandleScheme)
+        {
+        case EventHandleScheme::AFTER_TASK:
+        {
+            task();
+            handleQueuedEvents();
+            break;
+        }
+        case EventHandleScheme::BEFORE_TASK:
+        {
+            handleQueuedEvents();
+            task();
+            break;
+        }
+        case EventHandleScheme::USER_EXPLICIT:
+        {
+            task();
+            break;
+        }
+        }
     }
 }
 
