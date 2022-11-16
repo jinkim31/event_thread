@@ -1,6 +1,16 @@
 #include "firstThread.h"
 #include "secondThread.h"
 
+FirstThread::FirstThread() : EventThread("first")
+{
+
+}
+
+void FirstThread::firstEventCallback(std::string str)
+{
+
+}
+
 void FirstThread::onStart() 
 {
     EventThread::findThread(secondThreadRef, "second");

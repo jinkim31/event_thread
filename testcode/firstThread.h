@@ -14,15 +14,9 @@ public:
         int b;
     };
 
-    FirstThread() : EventThread("first")
-    {
-
-    }
+    FirstThread();
 events:
-    void firstEventCallback(std::string str)
-    {
-
-    }
+    void firstEventCallback(std::string str);
 private:
     ethr::ThreadRef<SecondThread> secondThreadRef;
 
