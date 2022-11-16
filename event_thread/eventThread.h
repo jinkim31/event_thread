@@ -56,7 +56,7 @@ private:
     size_t mEventQueueSize;
     SchedAttr mSchedAttr;
     timespec mNextTaskTime;
-    int64_t mLoopPeriod; // in ns
+    int64_t mLoopPeriod;
     bool mIsSchedAttrAvailable;
     bool mIsLoopRunning;
     bool checkLoopRunningSafe();
@@ -64,8 +64,8 @@ private:
     void queueNewEvent(const std::function<void ()> &func);
     void runLoop();
     static void* threadEntryPoint(void* param);
-    static std::vector<EventThread*> ethreads;
     static void timespecForward(timespec* ts, int64_t nsecTime);
+    static std::vector<EventThread*> ethreads;
 };
 
 }
@@ -80,10 +80,8 @@ template<typename EThreadType, class... Args>
 void ethr::EventThread::callInterthread(void(EThreadType::* func)(Args...), Args... args)
 {
     for(const auto& ethreadPtr : EventThread::ethreads)
-    {
-        if(typeid(*ethreadPtr) == typeid(EThreadType))
+    {   if(typeid(*ethreadPtr) == typeid(EThreadType))
         {
-            //std::cout<<"found "<<typeid(*ethreadPtr).name()<<std::endl;
             callQueued((EThreadType*)ethreadPtr, func, args...);
         }
     }
