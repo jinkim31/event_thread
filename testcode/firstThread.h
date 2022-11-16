@@ -3,9 +3,11 @@
 
 #include "../event_thread/eventThread.h"
 
+using namespace ethr;
+
 class SecondThread;
 
-class FirstThread : public ethr::EventThread
+class FirstThread : public EventThread
 {
 public:
     struct SharedResourceType
@@ -18,7 +20,7 @@ public:
 events:
     void firstEventCallback(std::string str);
 private:
-    ethr::ThreadRef<SecondThread> secondThreadRef;
+    ThreadRef<SecondThread> secondThreadRef;
 
     virtual void onStart();
     virtual void task();

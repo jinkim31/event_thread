@@ -62,13 +62,7 @@ public:
     template<typename EthreadType, class... Args>
     static void callInterthread(void(EthreadType::* func)(Args...), Args... args);
     template<typename EthreadType, class... Args>
-    static void callInterthread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args)
-    {
-        if(typeid(*ref.mRef) == typeid(EthreadType))
-        {
-            callQueued((EthreadType*)ref.mRef, func, args...);
-        }
-    }
+    static void callInterthread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args);
 protected:
     virtual void task()=0;      // pure virtual function that runs in the loop
     virtual void onStart()=0;   // pure virtual function that runs once when the thread starts
@@ -149,6 +143,15 @@ void ethr::EventThread::callInterthread(void(EthreadType::* func)(Args...), Args
     for(const auto& ethreadPtr : EventThread::ethreads)
     {   if(typeid(*ethreadPtr) == typeid(EthreadType))
             callQueued((EthreadType*)ethreadPtr, func, args...);
+    }
+}
+
+template<typename EthreadType, class... Args>
+void ethr::EventThread::callInterthread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args)
+{
+    if(typeid(*ref.mRef) == typeid(EthreadType))
+    {
+        callQueued((EthreadType*)ref.mRef, func, args...);
     }
 }
 

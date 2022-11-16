@@ -8,7 +8,7 @@ FirstThread::FirstThread() : EventThread("first")
 
 void FirstThread::firstEventCallback(std::string str)
 {
-
+    std::cout<<"first thread received: "<<str<<std::endl;
 }
 
 void FirstThread::onStart() 
@@ -18,5 +18,5 @@ void FirstThread::onStart()
 
 void FirstThread::task()
 {
-    EventThread::callInterthread(secondThreadRef, &SecondThread::secondEventCallback, std::string("interthread!"));
+    EventThread::callInterthread(secondThreadRef, &SecondThread::secondEventCallback, std::string("hello from first thread!"));
 }
