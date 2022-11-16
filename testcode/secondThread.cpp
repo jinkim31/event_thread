@@ -18,5 +18,10 @@ void SecondThread::onStart()
 
 void SecondThread::task()
 {
+    firstThreadRef.manipulateSharedResource<FirstThread::SharedResourceType>([](FirstThread::SharedResourceType& shared){
+        shared.a++;
+        shared.b++;
+    });
+
     EventThread::callInterthread(firstThreadRef, &FirstThread::firstEventCallback, std::string("hello from second thread!"));
 }

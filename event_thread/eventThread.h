@@ -50,29 +50,46 @@ public:
     };
 
     EventThread(const std::string& name);
+
     ~EventThread();
+
     void start();
+
     void stop();
+
     void setSched(SchedAttr& attr);
+
     void setLoopPeriod(uint64_t nsecPeriod);
+
     void setLoopFreq(double freq);
+
     void setEventHandleScheme(EventHandleScheme scheme);
-    template<typename ObjPtr, typename FuncPtr, class... Args>
-    static void callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args);
-    template<typename EthreadType, class... Args>
-    static void callInterthread(void(EthreadType::* func)(Args...), Args... args);
-    template<typename EthreadType, class... Args>
-    static void callInterthread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args);
-protected:
-    virtual void task()=0;      // pure virtual function that runs in the loop
-    virtual void onStart()=0;   // pure virtual function that runs once when the thread starts
-    void handleQueuedEvents();
-    template<typename SharedResourceType>
-    void makeSharedResource();
+
     template<typename SharedResourceType>
     void manipulateSharedResource(const std::function<void(SharedResourceType&)>& manipulator);
+
+    template<typename ObjPtr, typename FuncPtr, class... Args>
+    static void callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args);
+
+    template<typename EthreadType, class... Args>
+    static void callInterthread(void(EthreadType::* func)(Args...), Args... args);
+
+    template<typename EthreadType, class... Args>
+    static void callInterthread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args);
+
+protected:
+    virtual void task()=0;      // pure virtual function that runs in the loop
+
+    virtual void onStart()=0;   // pure virtual function that runs once when the thread starts
+
+    void handleQueuedEvents();
+
+    template<typename SharedResourceType>
+    void makeSharedResource();
+
     template<typename EthreadType>
     static bool findThread(ThreadRef<EthreadType>& ref, const std::string& name);
+
 private:
     const std::string mName;
     pid_t mPid, mTid;
@@ -87,11 +104,17 @@ private:
     bool mIsLoopRunning;
     EventHandleScheme mEventHandleScheme;
     std::unique_ptr<ISharedResource> mISharedResource;
+
     bool checkLoopRunningSafe();
+
     void queueNewEvent(const std::function<void ()> &func);
+
     void runLoop();
+
     static void* threadEntryPoint(void* param);
+
     static void timespecForward(timespec* ts, int64_t nsecTime);
+
     static std::vector<EventThread*> ethreads;
 };
 
@@ -100,6 +123,11 @@ class ThreadRef
 {
 public:
     ThreadRef(){}
+    template<typename SharedResourceType>
+    void manipulateSharedResource(const std::function<void(SharedResourceType&)>& manipulator)
+    {
+        ((EthreadType*)mRef)->manipulateSharedResource(manipulator);
+    }
 private:
     EthreadType* mRef;
 friend ethr::EventThread;
