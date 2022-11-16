@@ -49,7 +49,7 @@ public:
         __u64 sched_period;
     };
 
-    EventThread();
+    EventThread(const std::string& name);
     ~EventThread();
     void start();
     void stop();
@@ -59,8 +59,16 @@ public:
     void setEventHandleScheme(EventHandleScheme scheme);
     template<typename ObjPtr, typename FuncPtr, class... Args>
     static void callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args);
-    template<typename EThreadType, class... Args>
-    static void callInterthreadNonspecific(void(EThreadType::* func)(Args...), Args... args);
+    template<typename EthreadType, class... Args>
+    static void callInterthread(void(EthreadType::* func)(Args...), Args... args);
+    template<typename EthreadType, class... Args>
+    static void callInterthread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args)
+    {
+        if(typeid(*ref.mRef) == typeid(EthreadType))
+        {
+            callQueued((EthreadType*)ref.mRef, func, args...);
+        }
+    }
 protected:
     virtual void task()=0;      // pure virtual function that runs in the loop
     virtual void onStart()=0;   // pure virtual function that runs once when the thread starts
@@ -69,7 +77,10 @@ protected:
     void makeSharedResource();
     template<typename SharedResourceType>
     void manipulateSharedResource(const std::function<void(SharedResourceType&)>& manipulator);
+    template<typename EthreadType>
+    static bool findThread(ThreadRef<EthreadType>& ref, const std::string& name);
 private:
+    const std::string mName;
     pid_t mPid, mTid;
     pthread_t mPthread;
     std::mutex mMutexLoop, mMutexEvent;
@@ -90,6 +101,29 @@ private:
     static std::vector<EventThread*> ethreads;
 };
 
+template <typename EthreadType>
+class ThreadRef
+{
+public:
+    ThreadRef(){}
+private:
+    EthreadType* mRef;
+friend ethr::EventThread;
+};
+
+}
+
+template<typename EthreadType>
+bool ethr::EventThread::findThread(ThreadRef<EthreadType>& ref, const std::string& name)
+{
+    for(const auto& ethreadPtr : EventThread::ethreads)
+    {   if(typeid(*ethreadPtr) == typeid(EthreadType) && ethreadPtr->mName == name)
+        {
+                ref.mRef = (EthreadType*)ethreadPtr;
+                return true;
+        }
+    }
+    return false;
 }
 
 template<typename SharedResourceType>
@@ -109,12 +143,12 @@ void ethr::EventThread::callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args)
     ((EventThread*)objPtr)->queueNewEvent(std::bind(funcPtr, objPtr, args...));
 }
 
-template<typename EThreadType, class... Args>
-void ethr::EventThread::callInterthreadNonspecific(void(EThreadType::* func)(Args...), Args... args)
+template<typename EthreadType, class... Args>
+void ethr::EventThread::callInterthread(void(EthreadType::* func)(Args...), Args... args)
 {
     for(const auto& ethreadPtr : EventThread::ethreads)
-    {   if(typeid(*ethreadPtr) == typeid(EThreadType))
-            callQueued((EThreadType*)ethreadPtr, func, args...);
+    {   if(typeid(*ethreadPtr) == typeid(EthreadType))
+            callQueued((EthreadType*)ethreadPtr, func, args...);
     }
 }
 

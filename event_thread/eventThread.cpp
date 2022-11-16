@@ -2,7 +2,7 @@
 
 std::vector<ethr::EventThread*> ethr::EventThread::ethreads;
 
-ethr::EventThread::EventThread()
+ethr::EventThread::EventThread(const std::string& name) : mName(name)
 {
     mEventQueueSize = 1000;
     mIsSchedAttrAvailable = false;

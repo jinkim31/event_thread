@@ -8,7 +8,7 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 
 add_library(event_thread STATIC
     event_thread/eventThread.cpp
-    event_thread/threadRef.cpp
+    event_thread/sharedResource.cpp
 )
 
 find_package(Threads REQUIRED)

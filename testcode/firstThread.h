@@ -2,24 +2,32 @@
 #define TESTTHREAD_H
 
 #include "../event_thread/eventThread.h"
-#include "../event_thread/threadRef.h"
 
 class SecondThread;
 
 class FirstThread : public ethr::EventThread
 {
-events:
-    void firstEventCallback(std::string str);
-private:
+public:
     struct SharedResourceType
     {
         int a;
         int b;
     };
-    
-    ThreadRef<SecondThread> secondThread;
-    virtual void onStart() final;
-    virtual void task() final;
+
+    FirstThread() : EventThread("first")
+    {
+
+    }
+events:
+    void firstEventCallback(std::string str)
+    {
+
+    }
+private:
+    ethr::ThreadRef<SecondThread> secondThreadRef;
+
+    virtual void onStart();
+    virtual void task();
 };
 
 #endif // TESTTHREAD_H
