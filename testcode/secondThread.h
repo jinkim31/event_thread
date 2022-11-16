@@ -3,13 +3,14 @@
 
 #include "../event_thread/eventThread.h"
 
+class FirstThread;
+
 class SecondThread : public ethr::EventThread
 {
-public:
-    SecondThread();
 events:
     void secondEventCallback(std::string str);
 private:
+    virtual void onStart() final;
     virtual void task() final;
 };
 

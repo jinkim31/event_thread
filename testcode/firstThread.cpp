@@ -1,18 +1,26 @@
 #include "firstThread.h"
 #include "secondThread.h"
-#include <unistd.h>
-
-FirstThread::FirstThread()
-{
-    setEventHandleScheme(ethr::EventThread::EventHandleScheme::BEFORE_TASK);
-}
 
 void FirstThread::firstEventCallback(std::string str)
 {
-    std::cout<<"first thread received: \""<<str<<"\" (tid:"<<gettid()<<")"<<std::endl;
+    //std::cout<<"first thread received: \""<<str<<"\" (tid:"<<gettid()<<")"<<std::endl;
+}
+
+void FirstThread::onStart()
+{
+    makeSharedResource<SharedResourceType>();
+    manipulateSharedResource<SharedResourceType>([&](SharedResourceType& shared){
+        shared.a = 100;
+        shared.b = 100;
+    });
 }
 
 void FirstThread::task()
 {
-    ethr::EventThread::callInterthread(&SecondThread::secondEventCallback, std::string("hello from first thread"));
+    ethr::EventThread::callInterthreadNonspecific(&SecondThread::secondEventCallback, std::string("hello from first thread"));
+    manipulateSharedResource<SharedResourceType>([&](SharedResourceType& shared){
+        std::cout<<"a:"<<shared.a<<" b:"<<shared.b<<std::endl;
+        shared.a++;
+        shared.b++;
+    });
 }

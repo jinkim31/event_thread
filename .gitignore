@@ -5,3 +5,4 @@ CMakeCache.txt
 libevent_thread.a
 Makefile
 test
+.vscode

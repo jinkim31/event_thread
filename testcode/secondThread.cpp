@@ -1,19 +1,18 @@
-#include "firstThread.h"
-#include "secondThread.h"
 #include <unistd.h>
-
-SecondThread::SecondThread()
-{
-    setEventHandleScheme(ethr::EventThread::EventHandleScheme::USER_EXPLICIT);
-}
+#include "secondThread.h"
+#include "firstThread.h"
 
 void SecondThread::secondEventCallback(std::string str)
 {
-    std::cout<<"second thread received: \""<<str<<"\" (tid:"<<gettid()<<")"<<std::endl;
+    //std::cout<<"second thread received: \""<<str<<"\" (tid:"<<gettid()<<")"<<std::endl;
+}
+
+void SecondThread::onStart()
+{
+
 }
 
 void SecondThread::task()
 {
-    ethr::EventThread::callInterthread(&FirstThread::firstEventCallback, std::string("hello from second thread"));
-    handleQueuedEvents();
+    //ethr::EventThread::callInterthreadNonspecific(&FirstThread::firstEventCallback, std::string("hello from second thread"));
 }

@@ -78,7 +78,6 @@ void *ethr::EventThread::threadEntryPoint(void *param)
     ethreadPtr->mTid = gettid();
     ethreadPtr->mPid = getpid();
     if(ethreadPtr->mIsSchedAttrAvailable) syscall(__NR_sched_setattr, 0, ethreadPtr->mSchedAttr, 0);
-    //std::cout<<"starting new thread (pid:"<<ethreadPtr->mPid<<", tid:"<<ethreadPtr->mTid<<")"<<std::endl;
     clock_gettime(CLOCK_MONOTONIC, &(ethreadPtr->mNextTaskTime));
     timespecForward(&(ethreadPtr->mNextTaskTime), ethreadPtr->mLoopPeriod);
     ethreadPtr->runLoop();
@@ -105,6 +104,8 @@ void ethr::EventThread::runLoop()
     std::unique_lock<std::mutex> lock(mMutexLoop);
     mIsLoopRunning = true;
     lock.unlock();
+
+    onStart();
 
     while(checkLoopRunningSafe())
     {

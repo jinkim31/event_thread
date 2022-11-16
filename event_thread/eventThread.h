@@ -13,12 +13,19 @@
 #include <linux/sched.h>
 #include <sys/types.h>
 #include <linux/kernel.h>
+#include <memory>
+#include "sharedResource.h"
 
 #define events public
 #define NSEC_PER_SEC 1000000000
 
+
 namespace ethr
 {
+
+/* forward dclr */
+template<typename T>
+class ThreadRef;
 
 class EventThread
 {
@@ -53,12 +60,17 @@ public:
     template<typename ObjPtr, typename FuncPtr, class... Args>
     static void callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args);
     template<typename EThreadType, class... Args>
-    static void callInterthread(void(EThreadType::* func)(Args...), Args... args);
+    static void callInterthreadNonspecific(void(EThreadType::* func)(Args...), Args... args);
 protected:
-    pid_t mPid, mTid;
-    virtual void task()=0;
+    virtual void task()=0;      // pure virtual function that runs in the loop
+    virtual void onStart()=0;   // pure virtual function that runs once when the thread starts
     void handleQueuedEvents();
+    template<typename SharedResourceType>
+    void makeSharedResource();
+    template<typename SharedResourceType>
+    void manipulateSharedResource(const std::function<void(SharedResourceType&)>& manipulator);
 private:
+    pid_t mPid, mTid;
     pthread_t mPthread;
     std::mutex mMutexLoop, mMutexEvent;
     std::queue<std::function<void(void)>> mEventQueue;
@@ -69,6 +81,7 @@ private:
     bool mIsSchedAttrAvailable;
     bool mIsLoopRunning;
     EventHandleScheme mEventHandleScheme;
+    std::unique_ptr<ISharedResource> mISharedResource;
     bool checkLoopRunningSafe();
     void queueNewEvent(const std::function<void ()> &func);
     void runLoop();
@@ -79,6 +92,17 @@ private:
 
 }
 
+template<typename SharedResourceType>
+void ethr::EventThread::makeSharedResource()
+{
+    mISharedResource = std::make_unique<SharedResource<SharedResourceType>>();
+}
+template<typename SharedResourceType>
+void ethr::EventThread::manipulateSharedResource(const std::function<void(SharedResourceType&)>& manipulator)
+{
+    ((SharedResource<SharedResourceType>*)mISharedResource.get())->manipulate(manipulator);
+}
+
 template<typename ObjPtr, typename FuncPtr, class... Args>
 void ethr::EventThread::callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args)
 {
@@ -86,7 +110,7 @@ void ethr::EventThread::callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args)
 }
 
 template<typename EThreadType, class... Args>
-void ethr::EventThread::callInterthread(void(EThreadType::* func)(Args...), Args... args)
+void ethr::EventThread::callInterthreadNonspecific(void(EThreadType::* func)(Args...), Args... args)
 {
     for(const auto& ethreadPtr : EventThread::ethreads)
     {   if(typeid(*ethreadPtr) == typeid(EThreadType))
