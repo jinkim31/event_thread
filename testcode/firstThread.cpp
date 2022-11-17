@@ -18,6 +18,7 @@ void FirstThread::firstEventCallback(std::string str)
 void FirstThread::onStart() 
 {
     EventThread::findThread(secondThreadRef);
+
     makeSharedResource<SharedResourceType>();
     sharedResource<SharedResourceType>().manipulate([&](SharedResourceType& shared){
         shared.a = 100;

@@ -144,7 +144,7 @@ public:
 
     template<typename EthreadType>
     static bool findThread(ThreadRef<EthreadType>& ref, const std::string& name="");
-    
+
 protected:
     virtual void task()=0;      // pure virtual function that runs in the loop
 
@@ -187,15 +187,24 @@ template <typename EthreadType>
 class ThreadRef
 {
 public:
-    ThreadRef(){}
+    ThreadRef()
+    {
+        mHasRef=false;
+    }
     
     template<typename SharedResourceType>
     SharedResource<SharedResourceType>& sharedResource()
     {
         return mRef->sharedResource<SharedResourceType>();
     }
+
+    bool hasRef()
+    {
+        return mHasRef;
+    }
 private:
     EventThread* mRef;
+    bool mHasRef;
 friend ethr::EventThread;
 };
 
@@ -208,6 +217,7 @@ bool ethr::EventThread::findThread(ThreadRef<EthreadType>& ref, const std::strin
     {   if(typeid(*ethreadPtr) == typeid(EthreadType) && ethreadPtr->mName == name)
         {
                 ref.mRef = ethreadPtr;
+                ref.mHasRef = true;
                 return true;
         }
     }
