@@ -1,7 +1,7 @@
 #include "secondThread.h"
 #include "firstThread.h"
 
-SecondThread::SecondThread():EventThread("second")
+SecondThread::SecondThread()
 {
 
 }
@@ -13,7 +13,7 @@ void SecondThread::secondEventCallback(std::string str)
 
 void SecondThread::onStart()
 {
-    std::cout<<"first thread find "<<EventThread::findThread(firstThreadRef, "first")<<std::endl;
+    std::cout<<"first thread find "<<EventThread::findThread(firstThreadRef)<<std::endl;
 }
 
 void SecondThread::task()

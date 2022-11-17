@@ -97,11 +97,14 @@ public:
      */
     void setEventHandleScheme(EventHandleScheme scheme);
 
+    /**
+     * @brief Get shared reource.
+     * 
+     * @tparam SharedResourceType 
+     * @return SharedResource<SharedResourceType>& 
+     */
     template<typename SharedResourceType>
-    SharedResource<SharedResourceType>& sharedResource()
-    {
-        return *((SharedResource<SharedResourceType>*)mISharedResource.get());
-    }
+    SharedResource<SharedResourceType>& sharedResource();
 
     /**
      * @brief Add new event to thread event queue.
@@ -150,7 +153,7 @@ protected:
     void makeSharedResource();
 
     template<typename EthreadType>
-    static bool findThread(ThreadRef<EthreadType>& ref, const std::string& name);
+    static bool findThread(ThreadRef<EthreadType>& ref, const std::string& name="");
 
 private:
     std::string mName;
@@ -196,7 +199,7 @@ private:
 friend ethr::EventThread;
 };
 
-}
+}   // namespace ethr
 
 template<typename EthreadType>
 bool ethr::EventThread::findThread(ThreadRef<EthreadType>& ref, const std::string& name)
@@ -215,6 +218,12 @@ template<typename SharedResourceType>
 void ethr::EventThread::makeSharedResource()
 {
     mISharedResource = std::make_unique<SharedResource<SharedResourceType>>();
+}
+
+template<typename SharedResourceType>
+ethr::SharedResource<SharedResourceType>& ethr::EventThread::sharedResource()
+{
+    return *((SharedResource<SharedResourceType>*)mISharedResource.get());
 }
 
 template<typename ObjPtr, typename FuncPtr, class... Args>
