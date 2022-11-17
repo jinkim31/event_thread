@@ -142,6 +142,9 @@ public:
     template<typename EthreadType, class... Args>
     static void callInterthread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args);
 
+    template<typename EthreadType>
+    static bool findThread(ThreadRef<EthreadType>& ref, const std::string& name="");
+    
 protected:
     virtual void task()=0;      // pure virtual function that runs in the loop
 
@@ -151,9 +154,6 @@ protected:
 
     template<typename SharedResourceType>
     void makeSharedResource();
-
-    template<typename EthreadType>
-    static bool findThread(ThreadRef<EthreadType>& ref, const std::string& name="");
 
 private:
     std::string mName;
