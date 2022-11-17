@@ -97,14 +97,11 @@ public:
      */
     void setEventHandleScheme(EventHandleScheme scheme);
 
-    /**
-     * @brief Manipulate shared resource.
-     * 
-     * @tparam SharedResourceType 
-     * @param manipulator std::function<void(SharedResourceType&)> type functor used to manipulate shared resource.
-     */
     template<typename SharedResourceType>
-    void manipulateSharedResource(const std::function<void(SharedResourceType&)>& manipulator);
+    SharedResource<SharedResourceType>& sharedResource()
+    {
+        return *((SharedResource<SharedResourceType>*)mISharedResource.get());
+    }
 
     /**
      * @brief Add new event to thread event queue.
@@ -188,13 +185,14 @@ class ThreadRef
 {
 public:
     ThreadRef(){}
+    
     template<typename SharedResourceType>
-    void manipulateSharedResource(const std::function<void(SharedResourceType&)>& manipulator)
+    SharedResource<SharedResourceType>& sharedResource()
     {
-        ((EthreadType*)mRef)->manipulateSharedResource(manipulator);
+        return mRef->sharedResource<SharedResourceType>();
     }
 private:
-    EthreadType* mRef;
+    EventThread* mRef;
 friend ethr::EventThread;
 };
 
@@ -206,7 +204,7 @@ bool ethr::EventThread::findThread(ThreadRef<EthreadType>& ref, const std::strin
     for(const auto& ethreadPtr : EventThread::ethreads)
     {   if(typeid(*ethreadPtr) == typeid(EthreadType) && ethreadPtr->mName == name)
         {
-                ref.mRef = (EthreadType*)ethreadPtr;
+                ref.mRef = ethreadPtr;
                 return true;
         }
     }
@@ -217,11 +215,6 @@ template<typename SharedResourceType>
 void ethr::EventThread::makeSharedResource()
 {
     mISharedResource = std::make_unique<SharedResource<SharedResourceType>>();
-}
-template<typename SharedResourceType>
-void ethr::EventThread::manipulateSharedResource(const std::function<void(SharedResourceType&)>& manipulator)
-{
-    ((SharedResource<SharedResourceType>*)mISharedResource.get())->manipulate(manipulator);
 }
 
 template<typename ObjPtr, typename FuncPtr, class... Args>

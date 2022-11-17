@@ -9,7 +9,7 @@ FirstThread::FirstThread() : EventThread("first")
 void FirstThread::firstEventCallback(std::string str)
 {
     int a;
-    manipulateSharedResource<SharedResourceType>([&](SharedResourceType& shared){
+    sharedResource<SharedResourceType>().manipulate([&](SharedResourceType& shared){
         a = shared.a;
     });
     std::cout<<"first thread received: "<<str<<" a:"<<a<<std::endl;
@@ -19,7 +19,7 @@ void FirstThread::onStart()
 {
     EventThread::findThread(secondThreadRef, "second");
     makeSharedResource<SharedResourceType>();
-    manipulateSharedResource<SharedResourceType>([&](SharedResourceType& shared){
+    sharedResource<SharedResourceType>().manipulate([&](SharedResourceType& shared){
         shared.a = 100;
         shared.b = 200;
     });

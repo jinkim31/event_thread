@@ -19,33 +19,29 @@ template<typename T>
 class SharedResource : public ISharedResource
 {
 public:
-    SharedResource();
-    void setSharedResource(T* sharedResource);
-    void manipulate(const std::function<void(T&)>& manipulator);
+    SharedResource()
+    {
+
+    }
+    void setSharedResource(T* sharedResource)
+    {
+        mSharedResource = sharedResource;
+    }
+
+    /*
+    Template parameter lets compiler make classes for each ManipulatorType. Therefore manipulators doesn't have to reallocated every time, enhancing performance.
+    */
+    template<typename ManipulatorType>
+    void manipulate(const ManipulatorType& manipulator)
+    {
+        std::unique_lock<std::mutex> lock(mMutex);
+        manipulator(mSharedResource);
+    }
 private:
     T mSharedResource;
     std::mutex mMutex;
 };
 
-}
-
-template<typename T>
-ethr::SharedResource<T>::SharedResource()
-{
-
-}
-
-template<typename T>
-void ethr::SharedResource<T>::manipulate(const std::function<void(T&)>& manipulator)
-{
-    std::unique_lock<std::mutex> lock(mMutex);
-    manipulator(mSharedResource);
-}
-
-template<typename T>
-void ethr::SharedResource<T>::setSharedResource(T* sharedResource)
-{
-    mSharedResource = sharedResource;
 }
 
 #endif

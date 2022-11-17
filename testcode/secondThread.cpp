@@ -13,12 +13,12 @@ void SecondThread::secondEventCallback(std::string str)
 
 void SecondThread::onStart()
 {
-    EventThread::findThread(firstThreadRef, "first");
+    std::cout<<"first thread find "<<EventThread::findThread(firstThreadRef, "first")<<std::endl;
 }
 
 void SecondThread::task()
 {
-    firstThreadRef.manipulateSharedResource<FirstThread::SharedResourceType>([](FirstThread::SharedResourceType& shared){
+    firstThreadRef.sharedResource<FirstThread::SharedResourceType>().manipulate([](FirstThread::SharedResourceType& shared){
         shared.a++;
         shared.b++;
     });
