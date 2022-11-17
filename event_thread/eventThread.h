@@ -49,7 +49,7 @@ public:
         __u64 sched_period;
     };
 
-    EventThread(const std::string& name);
+    EventThread(const std::string& name="");
 
     ~EventThread();
 
@@ -65,6 +65,7 @@ public:
      */
     void stop();
 
+    void setName(const std::string& name);
     /**
      * @brief Set the sched attributes.
      * 
@@ -155,7 +156,7 @@ protected:
     static bool findThread(ThreadRef<EthreadType>& ref, const std::string& name);
 
 private:
-    const std::string mName;
+    std::string mName;
     pid_t mPid, mTid;
     pthread_t mPthread;
     std::mutex mMutexLoop, mMutexEvent;

@@ -2,8 +2,9 @@
 
 std::vector<ethr::EventThread*> ethr::EventThread::ethreads;
 
-ethr::EventThread::EventThread(const std::string& name) : mName(name)
+ethr::EventThread::EventThread(const std::string& name)
 {
+    mName = name;
     mEventQueueSize = 1000;
     mIsSchedAttrAvailable = false;
     mIsLoopRunning = false;
@@ -31,6 +32,11 @@ bool ethr::EventThread::checkLoopRunningSafe()
 {
     std::unique_lock<std::mutex> lock(mMutexLoop);
     return mIsLoopRunning;
+}
+
+void ethr::EventThread::setName(const std::string& name)
+{
+    mName = name;
 }
 
 void ethr::EventThread::setLoopPeriod(uint64_t nsecPeriod)

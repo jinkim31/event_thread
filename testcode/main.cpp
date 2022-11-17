@@ -15,7 +15,7 @@ int main()
     fThread.start();
     sThread.start();
 
-    sleep(3);
+    sleep(180);
 
     fThread.stop();
     sThread.stop();
