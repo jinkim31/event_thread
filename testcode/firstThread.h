@@ -1,7 +1,7 @@
 #ifndef TESTTHREAD_H
 #define TESTTHREAD_H
 
-#include "../event_thread/eventThread.h"
+#include <eventThread.h>
 
 using namespace ethr;
 

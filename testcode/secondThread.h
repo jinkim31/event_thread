@@ -1,7 +1,7 @@
 #ifndef SECONDTHREAD_H
 #define SECONDTHREAD_H
 
-#include "../event_thread/eventThread.h"
+#include <eventThread.h>
 
 using namespace ethr;
 
