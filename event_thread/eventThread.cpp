@@ -74,6 +74,7 @@ void ethr::EventThread::stop()
 
 void ethr::EventThread::queueNewEvent(const std::function<void ()> &func)
 {
+    if(!checkLoopRunningSafe()) return;
     std::unique_lock<std::mutex> lock(mMutexEvent);
     if(mEventQueue.size() < mEventQueueSize) mEventQueue.push(func);
 }
