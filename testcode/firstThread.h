@@ -18,7 +18,7 @@ public:
 
     FirstThread();
 events:
-    void firstEventCallback(std::string str);
+
 private:
     ThreadRef<SecondThread> secondThreadRef;
 

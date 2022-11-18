@@ -3,7 +3,7 @@
 
 SecondThread::SecondThread()
 {
-
+    setLoopFreq(10);
 }
 
 void SecondThread::secondEventCallback(std::string str)
@@ -13,15 +13,10 @@ void SecondThread::secondEventCallback(std::string str)
 
 void SecondThread::onStart()
 {
-    std::cout<<"first thread find "<<EventThread::findThread(firstThreadRef)<<std::endl;
+
 }
 
 void SecondThread::task()
 {
-    firstThreadRef.sharedResource<FirstThread::SharedResourceType>().manipulate([](FirstThread::SharedResourceType& shared){
-        shared.a++;
-        shared.b++;
-    });
 
-    EventThread::callInterthread(firstThreadRef, &FirstThread::firstEventCallback, std::string("hello from second thread!"));
 }

@@ -8,15 +8,9 @@ int main()
 {
     FirstThread fThread;
     SecondThread sThread;
-
-    fThread.setLoopFreq(10);
-    sThread.setLoopFreq(10);
-
     fThread.start();
     sThread.start();
-
-    sleep(180);
-
+    sleep(3);
     fThread.stop();
     sThread.stop();
 }
