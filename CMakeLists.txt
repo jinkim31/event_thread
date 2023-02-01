@@ -15,8 +15,6 @@ target_include_directories(event_thread PUBLIC ${PROJECT_SOURCE_DIR}/event_threa
 
 add_executable(test
     testcode/main.cpp
-    testcode/firstThread.cpp
-    testcode/secondThread.cpp
-)
+        testcode/MainThread.cpp testcode/MainThread.h testcode/BaseThread.cpp testcode/BaseThread.h testcode/DerivedThread.cpp testcode/DerivedThread.h)
 
 target_link_libraries(test PRIVATE event_thread)

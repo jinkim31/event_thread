@@ -57,10 +57,20 @@ void ethr::EventThread::setEventHandleScheme(EventHandleScheme scheme)
     mEventHandleScheme = scheme;
 }
 
-void ethr::EventThread::start()
+void ethr::EventThread::start(bool isMain)
 {
     if(checkLoopRunningSafe()) return;
-    pthread_create(&mPthread, NULL, EventThread::threadEntryPoint, this);
+
+    mIsMainThread = isMain;
+
+    if(isMain)
+    {
+        EventThread::threadEntryPoint(this);
+    }
+    else
+    {
+        pthread_create(&mPthread, NULL, EventThread::threadEntryPoint, this);
+    }
 }
 
 void ethr::EventThread::stop()
@@ -68,8 +78,11 @@ void ethr::EventThread::stop()
     mMutexLoop.lock();
     mIsLoopRunning = false;
     mMutexLoop.unlock();
-    void* ret;
-    pthread_join(mPthread, &ret);
+    if(!mIsMainThread)
+    {
+        void* ret;
+        pthread_join(mPthread, &ret);
+    }
 }
 
 void ethr::EventThread::queueNewEvent(const std::function<void ()> &func)

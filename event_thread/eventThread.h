@@ -57,7 +57,7 @@ public:
      * @brief Start thread.
      * 
      */
-    void start();
+    void start(bool isMain = false);
 
     /**
      * @brief Stop thread. This should be called before EventThread destruction.
@@ -156,6 +156,8 @@ protected:
     void makeSharedResource();
 
 private:
+    // main thread refers the thread that is started blocking the application's thread
+    bool mIsMainThread;
     std::string mName;
     pid_t mPid, mTid;
     pthread_t mPthread;
@@ -246,8 +248,12 @@ template<typename EthreadType, class... Args>
 void ethr::EventThread::callInterthread(void(EthreadType::* func)(Args...), Args... args)
 {
     for(const auto& ethreadPtr : EventThread::ethreads)
-    {   if(typeid(*ethreadPtr) == typeid(EthreadType))
-            callQueued((EthreadType*)ethreadPtr, func, args...);
+    {
+        if(typeid(*ethreadPtr) == typeid(EthreadType) || dynamic_cast<EthreadType*>(ethreadPtr))
+        {
+            //std::cout<<"match:"<<ethreadPtr->mName<<std::endl;
+            callQueued((EthreadType*) ethreadPtr, func, args...);
+        }
     }
 }
 
