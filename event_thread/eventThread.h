@@ -104,7 +104,7 @@ public:
      * @param args EventThread event function arguments
      */
     template<typename EthreadType, class... Args>
-    static void callInterthread(void(EthreadType::* func)(Args...), Args... args);
+    static void callInterThread(void(EthreadType::* func)(Args...), Args... args);
 
     /**
      * @brief Call interthread events of specific thread.
@@ -234,7 +234,7 @@ void ethr::EventThread::callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args)
 }
 
 template<typename EthreadType, class... Args>
-void ethr::EventThread::callInterthread(void(EthreadType::* func)(Args...), Args... args)
+void ethr::EventThread::callInterThread(void(EthreadType::* func)(Args...), Args... args)
 {
     for(const auto& ethreadPtr : EventThread::ethreads)
     {

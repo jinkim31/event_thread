@@ -21,12 +21,12 @@ MainThread::~MainThread()
 void MainThread::task()
 {
     static int count = 0;
-    if(count++>5)
+    if (count++ > 5)
         stop();
 
-    EventThread::callInterthread(&DerivedThread::basePrint);
-    EventThread::callInterthread(&DerivedThread::derivedPrint);
-    EventThread::callInterthread(&DerivedThread::callback, arr);
+    EventThread::callInterThread(&DerivedThread::basePrint);
+    EventThread::callInterThread(&DerivedThread::derivedPrint);
+    EventThread::callInterThread(&DerivedThread::callback, arr);
 }
 
 void MainThread::onStart()
