@@ -124,7 +124,9 @@ public:
 protected:
     virtual void task()=0;      // pure virtual function that runs in the loop
 
-    virtual void onStart()=0;   // pure virtual function that runs once when the thread starts
+    virtual void onStart(){};   // pure virtual function that runs once when the thread starts
+
+    virtual void onTerminate(){};
 
     void handleQueuedEvents();
 

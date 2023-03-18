@@ -160,4 +160,6 @@ void ethr::EventThread::runLoop()
         }
         }
     }
+
+    onTerminate();
 }
