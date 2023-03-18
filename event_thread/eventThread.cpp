@@ -59,6 +59,7 @@ void ethr::EventThread::setEventHandleScheme(EventHandleScheme scheme)
 
 void ethr::EventThread::start(bool isMain)
 {
+    std::cout<<"start"<<isMain<<std::endl;
     if(checkLoopRunningSafe()) return;
 
     mIsMainThread = isMain;
@@ -69,7 +70,11 @@ void ethr::EventThread::start(bool isMain)
     }
     else
     {
-        pthread_create(&mPthread, NULL, EventThread::threadEntryPoint, this);
+#ifdef ETHREAD_USE_PTHREAD
+        pthread_create(&mThread, NULL, EventThread::threadEntryPoint, this);
+#else
+        mThread = std::thread(EventThread::threadEntryPoint, this);
+#endif
     }
 }
 
@@ -80,8 +85,13 @@ void ethr::EventThread::stop()
     mMutexLoop.unlock();
     if(!mIsMainThread)
     {
+#ifdef ETHREAD_USE_PTHREAD
         void* ret;
-        pthread_join(mPthread, &ret);
+        pthread_join(mThread, &ret);
+#else
+        if(mThread.joinable())
+            mThread.join();
+#endif
     }
 }
 
@@ -95,9 +105,8 @@ void ethr::EventThread::queueNewEvent(const std::function<void ()> &func)
 void *ethr::EventThread::threadEntryPoint(void *param)
 {
     EventThread* ethreadPtr = (EventThread*)param;
-    ethreadPtr->mTid = gettid();
-    ethreadPtr->mPid = getpid();
-    if(ethreadPtr->mIsSchedAttrAvailable) syscall(__NR_sched_setattr, 0, ethreadPtr->mSchedAttr, 0);
+    //ethreadPtr->mTid = gettid();
+    //ethreadPtr->mPid = getpid();
     clock_gettime(CLOCK_MONOTONIC, &(ethreadPtr->mNextTaskTime));
     timespecForward(&(ethreadPtr->mNextTaskTime), ethreadPtr->mLoopPeriod);
     ethreadPtr->runLoop();
@@ -129,8 +138,8 @@ void ethr::EventThread::runLoop()
 
     while(checkLoopRunningSafe())
     {
-        clock_nanosleep(CLOCK_MONOTONIC, TIMER_ABSTIME, &mNextTaskTime, NULL);
-        timespecForward(&mNextTaskTime, mLoopPeriod);
+        //clock_nanosleep(CLOCK_MONOTONIC, , &mNextTaskTime, NULL);
+        //timespecForward(&mNextTaskTime, mLoopPeriod);
 
         switch(mEventHandleScheme)
         {
@@ -146,21 +155,13 @@ void ethr::EventThread::runLoop()
             task();
             break;
         }
-        case EventHandleScheme::USER_EXPLICIT:
+        case EventHandleScheme::USER_CONTROLLED:
         {
             task();
             break;
         }
         }
     }
-}
-
-void ethr::EventThread::setSched(SchedAttr& attr)
-{
-    if(checkLoopRunningSafe()) return;
-    attr.size = sizeof(SchedAttr);
-    mSchedAttr = attr;
-    mIsSchedAttrAvailable = true;
 }
 
 void ethr::EventThread::timespecForward(timespec* ts, int64_t nsecTime)

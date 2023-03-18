@@ -32,5 +32,3 @@ void MainThread::requestStop()
     std::cout<<"stop requested!"<<std::endl;
     stop();
 }
-
-

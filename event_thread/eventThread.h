@@ -1,7 +1,11 @@
 #ifndef EVENTTHREAD_H
 #define EVENTTHREAD_H
 
-#include <pthread.h>
+/*
+ * uncomment the following line to use pthread instead of std::thread
+ */
+// #define ETHREAD_USE_PTHREAD
+
 #include <iostream>
 #include <mutex>
 #include <functional>
@@ -10,11 +14,15 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 #include <sys/mman.h>
-#include <linux/sched.h>
 #include <sys/types.h>
-#include <linux/kernel.h>
 #include <memory>
 #include "sharedResource.h"
+
+#ifdef ETHREAD_USE_PTHREAD
+#include <pthread.h>
+#else
+#include <thread>
+#endif
 
 #define events public
 #define NSEC_PER_SEC 1000000000
@@ -34,19 +42,7 @@ public:
     {
         AFTER_TASK,
         BEFORE_TASK,
-        USER_EXPLICIT,
-    };
-
-    struct SchedAttr
-    {
-        __u32 size;
-        __u32 sched_policy;
-        __u64 sched_flags;
-        __s32 sched_nice;
-        __u32 sched_priority;
-        __u64 sched_runtime;
-        __u64 sched_deadline;
-        __u64 sched_period;
+        USER_CONTROLLED,
     };
 
     EventThread(const std::string& name="");
@@ -66,12 +62,6 @@ public:
     void stop();
 
     void setName(const std::string& name);
-    /**
-     * @brief Set the sched attributes.
-     * 
-     * @param attr 
-     */
-    void setSched(SchedAttr& attr);
 
     /**
      * @brief Set the loop period in nanoseconds.
@@ -93,7 +83,7 @@ public:
      * @param scheme 
      *  AFTER_TASK: handles event after task() execution
      *  BEFORE_TASK: handles event before task() execution
-     *  USER_EXPLICIT: event handling is triggered when user explicitly calls handleQueuedEvents()
+     *  USER_CONTROLLED: event handling is triggered when user explicitly calls handleQueuedEvents()
      */
     void setEventHandleScheme(EventHandleScheme scheme);
 
@@ -159,15 +149,16 @@ private:
     // main thread refers the thread that is started blocking the application's thread
     bool mIsMainThread;
     std::string mName;
-    pid_t mPid, mTid;
-    pthread_t mPthread;
+#ifdef ETHREAD_USE_PTHREAD
+    pthread_t mThread;
+#else
+    std::thread mThread;
+#endif
     std::mutex mMutexLoop, mMutexEvent;
     std::queue<std::function<void(void)>> mEventQueue;
     size_t mEventQueueSize;
-    SchedAttr mSchedAttr;
     timespec mNextTaskTime;
     int64_t mLoopPeriod;
-    bool mIsSchedAttrAvailable;
     bool mIsLoopRunning;
     EventHandleScheme mEventHandleScheme;
     std::unique_ptr<ISharedResource> mISharedResource;
