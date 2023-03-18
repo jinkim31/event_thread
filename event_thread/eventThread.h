@@ -21,8 +21,6 @@
 #include <thread>
 #endif
 
-#define events public
-
 namespace ethr
 {
 

@@ -9,7 +9,6 @@ class BaseThread : public EventThread
 {
 public:
     BaseThread();
-events:
     void basePrint();
 private:
     int num;

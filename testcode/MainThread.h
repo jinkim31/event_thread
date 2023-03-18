@@ -11,7 +11,6 @@ class MainThread : public EventThread
 public:
     MainThread();
     ~MainThread();
-events:
     void requestStop();
 protected:
     void task() override;

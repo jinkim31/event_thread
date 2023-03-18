@@ -79,6 +79,8 @@ void ethr::EventThread::start(bool isMain)
 
 void ethr::EventThread::stop()
 {
+    if(!checkLoopRunningSafe()) return;
+
     mMutexLoop.lock();
     mIsLoopRunning = false;
     mMutexLoop.unlock();
