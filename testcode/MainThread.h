@@ -17,8 +17,9 @@ protected:
     void task() override;
 
     void onStart() override;
-public:
+private:
     DerivedThread derivedThread;
+    ethr::SafeSharedPtr<std::array<int, 3>> arr;
 };
 
 #endif

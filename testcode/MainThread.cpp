@@ -5,6 +5,12 @@ MainThread::MainThread() : EventThread("main")
 {
     derivedThread.start();
     setLoopPeriod(std::chrono::milliseconds(500));
+    arr = ethr::SafeSharedPtr<std::array<int, 3>>(std::make_shared<std::array<int, 3>>());
+    arr.readWrite([&](ethr::SafeSharedPtr<std::array<int, 3>>::ReadWritePtr ptr){
+        ptr->at(0) = 10;
+        ptr->at(1) = 20;
+        ptr->at(2) = 30;
+    });
 }
 
 MainThread::~MainThread()
@@ -20,6 +26,7 @@ void MainThread::task()
 
     EventThread::callInterthread(&DerivedThread::basePrint);
     EventThread::callInterthread(&DerivedThread::derivedPrint);
+    EventThread::callInterthread(&DerivedThread::callback, arr);
 }
 
 void MainThread::onStart()
