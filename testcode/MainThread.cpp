@@ -4,7 +4,7 @@
 MainThread::MainThread() : EventThread("main")
 {
     derivedThread.start();
-    setLoopFreq(10);
+    setLoopPeriod(std::chrono::milliseconds(500));
 }
 
 MainThread::~MainThread()

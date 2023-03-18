@@ -6,10 +6,9 @@ ethr::EventThread::EventThread(const std::string& name)
 {
     mName = name;
     mEventQueueSize = 1000;
-    mIsSchedAttrAvailable = false;
     mIsLoopRunning = false;
     mEventHandleScheme = EventHandleScheme::AFTER_TASK;
-    mLoopPeriod = 0;
+    mTaskPeriod = std::chrono::high_resolution_clock::duration::zero();
     ethreads.push_back(this);
 }
 
@@ -39,16 +38,16 @@ void ethr::EventThread::setName(const std::string& name)
     mName = name;
 }
 
-void ethr::EventThread::setLoopPeriod(uint64_t nsecPeriod)
+void ethr::EventThread::setLoopPeriod(std::chrono::duration<long long int, std::nano> period)
 {
     if(checkLoopRunningSafe()) return;
-    mLoopPeriod = nsecPeriod;
+    mTaskPeriod = period;
 }
 
-void ethr::EventThread::setLoopFreq(double freq)
+void ethr::EventThread::setLoopFreq(const unsigned int freq)
 {
     if(checkLoopRunningSafe()) return;
-    mLoopPeriod = NSEC_PER_SEC / freq;
+    mTaskPeriod = std::chrono::seconds(1) / freq;
 }
 
 void ethr::EventThread::setEventHandleScheme(EventHandleScheme scheme)
@@ -107,8 +106,7 @@ void *ethr::EventThread::threadEntryPoint(void *param)
     EventThread* ethreadPtr = (EventThread*)param;
     //ethreadPtr->mTid = gettid();
     //ethreadPtr->mPid = getpid();
-    clock_gettime(CLOCK_MONOTONIC, &(ethreadPtr->mNextTaskTime));
-    timespecForward(&(ethreadPtr->mNextTaskTime), ethreadPtr->mLoopPeriod);
+    ethreadPtr->mNextTaskTime = std::chrono::high_resolution_clock::now() + ethreadPtr->mTaskPeriod;
     ethreadPtr->runLoop();
     return nullptr;
 }
@@ -138,8 +136,8 @@ void ethr::EventThread::runLoop()
 
     while(checkLoopRunningSafe())
     {
-        //clock_nanosleep(CLOCK_MONOTONIC, , &mNextTaskTime, NULL);
-        //timespecForward(&mNextTaskTime, mLoopPeriod);
+        while(std::chrono::high_resolution_clock::now() < mNextTaskTime);
+        mNextTaskTime += mTaskPeriod;
 
         switch(mEventHandleScheme)
         {
@@ -161,21 +159,5 @@ void ethr::EventThread::runLoop()
             break;
         }
         }
-    }
-}
-
-void ethr::EventThread::timespecForward(timespec* ts, int64_t nsecTime)
-{
-    int64_t sec, nsec;
-
-    nsec = nsecTime % NSEC_PER_SEC;
-    sec = (nsecTime - nsec) / NSEC_PER_SEC;
-    ts->tv_sec += sec;
-    ts->tv_nsec += nsec;
-    if (ts->tv_nsec > NSEC_PER_SEC)
-    {
-        nsec = ts->tv_nsec % NSEC_PER_SEC;
-        ts->tv_sec += (ts->tv_nsec - nsec) / NSEC_PER_SEC;
-        ts->tv_nsec = nsec;
     }
 }

@@ -4,17 +4,14 @@
 /*
  * uncomment the following line to use pthread instead of std::thread
  */
-// #define ETHREAD_USE_PTHREAD
+//#define ETHREAD_USE_PTHREAD
 
 #include <iostream>
 #include <mutex>
 #include <functional>
 #include <queue>
 #include <vector>
-#include <unistd.h>
-#include <sys/syscall.h>
-#include <sys/mman.h>
-#include <sys/types.h>
+#include <chrono>
 #include <memory>
 #include "sharedResource.h"
 
@@ -25,8 +22,6 @@
 #endif
 
 #define events public
-#define NSEC_PER_SEC 1000000000
-
 
 namespace ethr
 {
@@ -66,16 +61,16 @@ public:
     /**
      * @brief Set the loop period in nanoseconds.
      * 
-     * @param nsecPeriod 
+     * @param period
      */
-    void setLoopPeriod(uint64_t nsecPeriod);
+    void setLoopPeriod(std::chrono::duration<long long int, std::nano> period);
 
     /**
      * @brief Set the loop frequency in Hz.
      * 
      * @param freq 
      */
-    void setLoopFreq(double freq);
+    void setLoopFreq(const unsigned int freq);
 
     /**
      * @brief Set the event handling scheme. 
@@ -146,19 +141,19 @@ protected:
     void makeSharedResource();
 
 private:
-    // main thread refers the thread that is started blocking the application's thread
-    bool mIsMainThread;
-    std::string mName;
 #ifdef ETHREAD_USE_PTHREAD
     pthread_t mThread;
 #else
     std::thread mThread;
 #endif
+    // main thread refers the thread that is started blocking the application's thread
+    bool mIsMainThread;
+    std::string mName;
     std::mutex mMutexLoop, mMutexEvent;
     std::queue<std::function<void(void)>> mEventQueue;
     size_t mEventQueueSize;
-    timespec mNextTaskTime;
-    int64_t mLoopPeriod;
+    std::chrono::high_resolution_clock::duration  mTaskPeriod;
+    std::chrono::time_point<std::chrono::high_resolution_clock> mNextTaskTime;
     bool mIsLoopRunning;
     EventHandleScheme mEventHandleScheme;
     std::unique_ptr<ISharedResource> mISharedResource;
