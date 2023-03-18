@@ -1,5 +1,5 @@
-#ifndef EVENTTHREAD_H
-#define EVENTTHREAD_H
+#ifndef EVENT_THREAD_H
+#define EVENT_THREAD_H
 
 /*
  * uncomment the following line to use pthread instead of std::thread
@@ -13,7 +13,6 @@
 #include <vector>
 #include <chrono>
 #include <memory>
-#include "sharedResource.h"
 
 #ifdef ETHREAD_USE_PTHREAD
 #include <pthread.h>
@@ -83,15 +82,6 @@ public:
     void setEventHandleScheme(EventHandleScheme scheme);
 
     /**
-     * @brief Get shared reource.
-     * 
-     * @tparam SharedResourceType 
-     * @return SharedResource<SharedResourceType>& 
-     */
-    template<typename SharedResourceType>
-    SharedResource<SharedResourceType>& sharedResource();
-
-    /**
      * @brief Add new event to thread event queue.
      * 
      * @tparam ObjPtr
@@ -156,7 +146,6 @@ private:
     std::chrono::time_point<std::chrono::high_resolution_clock> mNextTaskTime;
     bool mIsLoopRunning;
     EventHandleScheme mEventHandleScheme;
-    std::unique_ptr<ISharedResource> mISharedResource;
 
     bool checkLoopRunningSafe();
 
@@ -176,12 +165,6 @@ public:
     ThreadRef()
     {
         mHasRef=false;
-    }
-    
-    template<typename SharedResourceType>
-    SharedResource<SharedResourceType>& sharedResource()
-    {
-        return mRef->sharedResource<SharedResourceType>();
     }
 
     bool hasRef()
@@ -208,18 +191,6 @@ bool ethr::EventThread::findThread(ThreadRef<EthreadType>& ref, const std::strin
         }
     }
     return false;
-}
-
-template<typename SharedResourceType>
-void ethr::EventThread::makeSharedResource()
-{
-    mISharedResource = std::make_unique<SharedResource<SharedResourceType>>();
-}
-
-template<typename SharedResourceType>
-ethr::SharedResource<SharedResourceType>& ethr::EventThread::sharedResource()
-{
-    return *((SharedResource<SharedResourceType>*)mISharedResource.get());
 }
 
 template<typename ObjPtr, typename FuncPtr, class... Args>

@@ -5,8 +5,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(event_thread STATIC
     event_thread/eventThread.cpp
-    event_thread/sharedResource.cpp
-)
+        )
 
 
 find_package(Threads REQUIRED)
