@@ -125,7 +125,7 @@ public:
      * @param args EventThread event function arguments
      */
     template<typename EthreadType, class... Args>
-    static void callInterthread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args);
+    static void callInterThread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args);
 
     template<typename EthreadType>
     static bool findThread(ThreadRef<EthreadType>& ref, const std::string& name="");
@@ -165,8 +165,6 @@ private:
     void runLoop();
 
     static void* threadEntryPoint(void* param);
-
-    static void timespecForward(timespec* ts, int64_t nsecTime);
 
     static std::vector<EventThread*> ethreads;
 };
@@ -244,7 +242,7 @@ void ethr::EventThread::callInterthread(void(EthreadType::* func)(Args...), Args
 }
 
 template<typename EthreadType, class... Args>
-void ethr::EventThread::callInterthread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args)
+void ethr::EventThread::callInterThread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args)
 {
     callQueued((EthreadType*)ref.mRef, func, args...);
 }
