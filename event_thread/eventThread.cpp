@@ -113,7 +113,7 @@ void *ethr::EventThread::threadEntryPoint(void *param)
 
 void ethr::EventThread::handleQueuedEvents()
 {
-    while(!mEventQueue.empty() && checkLoopRunningSafe())
+    while(!mEventQueue.empty())
     {
         // lock mutex and copy function at the front
         std::unique_lock<std::mutex> eventLock(mMutexEvent);
