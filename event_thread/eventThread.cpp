@@ -58,7 +58,6 @@ void ethr::EventThread::setEventHandleScheme(EventHandleScheme scheme)
 
 void ethr::EventThread::start(bool isMain)
 {
-    std::cout<<"start"<<isMain<<std::endl;
     if(checkLoopRunningSafe()) return;
 
     mIsMainThread = isMain;
@@ -98,7 +97,6 @@ void ethr::EventThread::stop()
 
 void ethr::EventThread::queueNewEvent(const std::function<void ()> &func)
 {
-    if(!checkLoopRunningSafe()) return;
     std::unique_lock<std::mutex> lock(mMutexEvent);
     if(mEventQueue.size() < mEventQueueSize) mEventQueue.push(func);
 }
