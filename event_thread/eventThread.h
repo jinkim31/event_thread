@@ -19,16 +19,28 @@
 #include <pthread.h>
 #else
 #include <thread>
+#include <map>
+
 #endif
 
 namespace ethr
 {
+    class EThread;
 
-/* forward dclr */
-template<typename T>
-class ThreadRef;
+class EThreadObject
+{
+public:
+    explicit EThreadObject(EThread* ethreadPtr = nullptr);
 
-class EventThread
+    template<typename ObjPtr, typename FuncPtr, class... Args>
+    void callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args);
+
+    void moveToThread(EThread* ethread);
+private:
+    EThread* mParentThread;
+};
+
+class EThread
 {
 public:
     enum class EventHandleScheme
@@ -38,18 +50,18 @@ public:
         USER_CONTROLLED,
     };
 
-    EventThread(const std::string& name="");
+    explicit EThread(const std::string& name="unnamed");
 
-    ~EventThread();
+    ~EThread();
 
     /**
      * @brief Start thread.
      * 
      */
-    void start(bool isMain = false);
+    void start(bool makeNewThread = true);
 
     /**
-     * @brief Stop thread. This should be called before EventThread destruction.
+     * @brief Stop thread. This should be called before EThread destruction.
      * 
      */
     void stop();
@@ -68,7 +80,7 @@ public:
      * 
      * @param freq 
      */
-    void setLoopFreq(const unsigned int freq);
+    void setLoopFreq(const unsigned int& freq);
 
     /**
      * @brief Set the event handling scheme. 
@@ -86,7 +98,7 @@ public:
      * @tparam ObjPtr
      * @tparam FuncPtr
      * @tparam Args
-     * @param objPtr ObjPtr EventThread object pointer to add event to
+     * @param objPtr ObjPtr EThread object pointer to add event to
      * @param funcPtr event function pointer
      * @param args event function pointer arguments
      */
@@ -98,38 +110,19 @@ public:
      * 
      * @tparam EthreadType 
      * @tparam Args 
-     * @param func EventThread event function pointer
-     * @param args EventThread event function arguments
+     * @param func EThread event function pointer
+     * @param args EThread event function arguments
      */
     template<typename EthreadType, class... Args>
     static void callInterThread(void(EthreadType::* func)(Args...), Args... args);
-
-    /**
-     * @brief Call interthread events of specific thread.
-     * 
-     * @tparam EthreadType 
-     * @tparam Args 
-     * @param ref ThreadRef of desired EventThread
-     * @param func EventThread event function pointer
-     * @param args EventThread event function arguments
-     */
-    template<typename EthreadType, class... Args>
-    static void callInterThread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args);
-
-    template<typename EthreadType>
-    static bool findThread(ThreadRef<EthreadType>& ref, const std::string& name="");
-
 protected:
-    virtual void task()=0;      // pure virtual function that runs in the loop
+    virtual void task(){};      // virtual function that runs in the loop
 
-    virtual void onStart(){};   // pure virtual function that runs once when the thread starts
+    virtual void onStart(){};   // virtual function that runs once when the thread starts
 
     virtual void onTerminate(){};
 
     void handleQueuedEvents();
-
-    template<typename SharedResourceType>
-    void makeSharedResource();
 
 private:
 #ifdef ETHREAD_USE_PTHREAD
@@ -156,26 +149,8 @@ private:
 
     static void* threadEntryPoint(void* param);
 
-    static std::vector<EventThread*> ethreads;
-};
-
-template <typename EthreadType>
-class ThreadRef
-{
-public:
-    ThreadRef()
-    {
-        mHasRef=false;
-    }
-
-    bool hasRef()
-    {
-        return mHasRef;
-    }
-private:
-    EventThread* mRef;
-    bool mHasRef;
-friend ethr::EventThread;
+    static std::map<std::thread::id, EThread*> ethreads;
+friend EThreadObject;
 };
 
 template<typename T>
@@ -186,12 +161,12 @@ public:
     using ReadWritePtr = const std::shared_ptr<T>;
     /* constructors */
     SafeSharedPtr();
-    SafeSharedPtr(std::shared_ptr<T> var);
+    explicit SafeSharedPtr(std::shared_ptr<T> var);
     /* copy constructor */
-    SafeSharedPtr(const SafeSharedPtr& safeType);
+    SafeSharedPtr(const SafeSharedPtr& safeSharedPtr);
 
     // minimize code that goes into the lambda since it will be ran in a critical section
-    template<typename Manip>    // functor template avoids reallocations. Manip has to be the type: void(const std::shared_ptr<const T>)
+    template<typename Manip>    // functor template avoids relocations. Manip has to be the type: void(const std::shared_ptr<const T>)
     void readOnly(Manip manip)
     {
         std::shared_lock lock(*mMutexPtr);
@@ -213,30 +188,22 @@ private:
 
 }   // namespace ethr
 
-template<typename EthreadType>
-bool ethr::EventThread::findThread(ThreadRef<EthreadType>& ref, const std::string& name)
+template<typename ObjPtr, typename FuncPtr, class... Args>
+void ethr::EThreadObject::callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args)
 {
-    for(const auto& ethreadPtr : EventThread::ethreads)
-    {   if(typeid(*ethreadPtr) == typeid(EthreadType) && ethreadPtr->mName == name)
-        {
-                ref.mRef = ethreadPtr;
-                ref.mHasRef = true;
-                return true;
-        }
-    }
-    return false;
+    mParentThread->queueNewEvent(std::bind(funcPtr, objPtr, args...));
 }
 
 template<typename ObjPtr, typename FuncPtr, class... Args>
-void ethr::EventThread::callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args)
+void ethr::EThread::callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args)
 {
-    ((EventThread*)objPtr)->queueNewEvent(std::bind(funcPtr, objPtr, args...));
+    ((EThread*)objPtr)->queueNewEvent(std::bind(funcPtr, objPtr, args...));
 }
 
 template<typename EthreadType, class... Args>
-void ethr::EventThread::callInterThread(void(EthreadType::* func)(Args...), Args... args)
+void ethr::EThread::callInterThread(void(EthreadType::* func)(Args...), Args... args)
 {
-    for(const auto& ethreadPtr : EventThread::ethreads)
+    for (const auto & [threadId, ethreadPtr] : EThread::ethreads)
     {
         if(typeid(*ethreadPtr) == typeid(EthreadType) || dynamic_cast<EthreadType*>(ethreadPtr))
         {
@@ -244,12 +211,6 @@ void ethr::EventThread::callInterThread(void(EthreadType::* func)(Args...), Args
             callQueued((EthreadType*) ethreadPtr, func, args...);
         }
     }
-}
-
-template<typename EthreadType, class... Args>
-void ethr::EventThread::callInterThread(ThreadRef<EthreadType>& ref, void(EthreadType::* func)(Args...), Args... args)
-{
-    callQueued((EthreadType*)ref.mRef, func, args...);
 }
 
 template<typename T>
@@ -266,9 +227,9 @@ ethr::SafeSharedPtr<T>::SafeSharedPtr(std::shared_ptr<T> var)
 }
 
 template<typename T>
-ethr::SafeSharedPtr<T>::SafeSharedPtr(const SafeSharedPtr &safePtrType)
+ethr::SafeSharedPtr<T>::SafeSharedPtr(const SafeSharedPtr &safeSharedPtr)
 {
-    mVar = safePtrType.mVar;
-    mMutexPtr = safePtrType.mMutexPtr;
+    mVar = safeSharedPtr.mVar;
+    mMutexPtr = safeSharedPtr.mMutexPtr;
 }
 #endif

@@ -1,18 +1,39 @@
 #include "eventThread.h"
 
-std::vector<ethr::EventThread*> ethr::EventThread::ethreads;
+std::map<std::thread::id, ethr::EThread*> ethr::EThread::ethreads;
 
-ethr::EventThread::EventThread(const std::string& name)
+ethr::EThreadObject::EThreadObject(EThread* ethreadPtr)
+{
+    mParentThread = nullptr;
+    if(ethreadPtr != nullptr)
+        return;
+    std::cout<<"looking for thread with tid: "<<std::this_thread::get_id()<<std::endl;
+    auto foundThread = EThread::ethreads.find(std::this_thread::get_id());
+    if(foundThread == EThread::ethreads.end())
+    {
+        std::cerr<<"[EThread] Something went wrong. EThreadObject couldn't find Ethread with pid: "<<std::this_thread::get_id()<<std::endl;
+        return;
+    }
+    std::cout<<"EThread found with name "<<foundThread->second->mName<<std::endl;
+    mParentThread = foundThread->second;
+}
+
+void ethr::EThreadObject::moveToThread(ethr::EThread *ethread)
+{
+    mParentThread = ethread;
+}
+
+ethr::EThread::EThread(const std::string& name)
 {
     mName = name;
     mEventQueueSize = 1000;
     mIsLoopRunning = false;
     mEventHandleScheme = EventHandleScheme::AFTER_TASK;
     mTaskPeriod = std::chrono::high_resolution_clock::duration::zero();
-    ethreads.push_back(this);
+    ethreads.insert({std::this_thread::get_id(), this});
 }
 
-ethr::EventThread::~EventThread()
+ethr::EThread::~EThread()
 {
     /*
      * stop() should be called explicitly befor thread destruction.
@@ -22,61 +43,61 @@ ethr::EventThread::~EventThread()
      * terminate called without an active exception
      *
      * stop() is here just in case and it's not safe to terminate a thread with it
-     * since the derived class implementing vitual void task() is destructed prior to EventThread itself.
+     * since the derived class implementing vitual void task() is destructed prior to EThread itself.
      */
     stop();
 }
 
-bool ethr::EventThread::checkLoopRunningSafe()
+bool ethr::EThread::checkLoopRunningSafe()
 {
     std::unique_lock<std::mutex> lock(mMutexLoop);
     return mIsLoopRunning;
 }
 
-void ethr::EventThread::setName(const std::string& name)
+void ethr::EThread::setName(const std::string& name)
 {
     mName = name;
 }
 
-void ethr::EventThread::setLoopPeriod(std::chrono::duration<long long int, std::nano> period)
+void ethr::EThread::setLoopPeriod(std::chrono::duration<long long int, std::nano> period)
 {
     if(checkLoopRunningSafe()) return;
     mTaskPeriod = period;
 }
 
-void ethr::EventThread::setLoopFreq(const unsigned int freq)
+void ethr::EThread::setLoopFreq(const unsigned int& freq)
 {
     if(checkLoopRunningSafe()) return;
     mTaskPeriod = std::chrono::seconds(1) / freq;
 }
 
-void ethr::EventThread::setEventHandleScheme(EventHandleScheme scheme)
+void ethr::EThread::setEventHandleScheme(EventHandleScheme scheme)
 {
     if(checkLoopRunningSafe()) return;
     mEventHandleScheme = scheme;
 }
 
-void ethr::EventThread::start(bool isMain)
+void ethr::EThread::start(bool makeNewThread)
 {
     if(checkLoopRunningSafe()) return;
 
-    mIsMainThread = isMain;
+    mIsMainThread = makeNewThread;
 
-    if(isMain)
+    if(makeNewThread)
     {
-        EventThread::threadEntryPoint(this);
+#ifdef ETHREAD_USE_PTHREAD
+        pthread_create(&mThread, NULL, EThread::threadEntryPoint, this);
+#else
+        mThread = std::thread(EThread::threadEntryPoint, this);
+#endif
     }
     else
     {
-#ifdef ETHREAD_USE_PTHREAD
-        pthread_create(&mThread, NULL, EventThread::threadEntryPoint, this);
-#else
-        mThread = std::thread(EventThread::threadEntryPoint, this);
-#endif
+        EThread::threadEntryPoint(this);
     }
 }
 
-void ethr::EventThread::stop()
+void ethr::EThread::stop()
 {
     if(!checkLoopRunningSafe()) return;
 
@@ -95,23 +116,21 @@ void ethr::EventThread::stop()
     }
 }
 
-void ethr::EventThread::queueNewEvent(const std::function<void ()> &func)
+void ethr::EThread::queueNewEvent(const std::function<void ()> &func)
 {
     std::unique_lock<std::mutex> lock(mMutexEvent);
     if(mEventQueue.size() < mEventQueueSize) mEventQueue.push(func);
 }
 
-void *ethr::EventThread::threadEntryPoint(void *param)
+void *ethr::EThread::threadEntryPoint(void *param)
 {
-    EventThread* ethreadPtr = (EventThread*)param;
-    //ethreadPtr->mTid = gettid();
-    //ethreadPtr->mPid = getpid();
+    EThread* ethreadPtr = (EThread*)param;
     ethreadPtr->mNextTaskTime = std::chrono::high_resolution_clock::now() + ethreadPtr->mTaskPeriod;
     ethreadPtr->runLoop();
     return nullptr;
 }
 
-void ethr::EventThread::handleQueuedEvents()
+void ethr::EThread::handleQueuedEvents()
 {
     while(!mEventQueue.empty())
     {
@@ -126,7 +145,7 @@ void ethr::EventThread::handleQueuedEvents()
     }
 }
 
-void ethr::EventThread::runLoop()
+void ethr::EThread::runLoop()
 {
     std::unique_lock<std::mutex> lock(mMutexLoop);
     mIsLoopRunning = true;
