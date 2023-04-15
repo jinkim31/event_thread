@@ -14,31 +14,17 @@
 #include <vector>
 #include <chrono>
 #include <memory>
+#include <map>
 
 #ifdef ETHREAD_USE_PTHREAD
 #include <pthread.h>
 #else
 #include <thread>
-#include <map>
-
 #endif
 
 namespace ethr
 {
-    class EThread;
-
-class EThreadObject
-{
-public:
-    explicit EThreadObject(EThread* ethreadPtr = nullptr);
-
-    template<typename ObjPtr, typename FuncPtr, class... Args>
-    void callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args);
-
-    void moveToThread(EThread* ethread);
-private:
-    EThread* mParentThread;
-};
+class EThreadObject;
 
 class EThread
 {
@@ -93,28 +79,15 @@ public:
     void setEventHandleScheme(EventHandleScheme scheme);
 
     /**
-     * @brief Add new event to thread event queue.
-     * 
-     * @tparam ObjPtr
-     * @tparam FuncPtr
-     * @tparam Args
-     * @param objPtr ObjPtr EThread object pointer to add event to
-     * @param funcPtr event function pointer
-     * @param args event function pointer arguments
+     * @brief call functions in a thread-safe manner
+     * @param funcPtr void function pointer
+     * @param args arguments
      */
-    template<typename ObjPtr, typename FuncPtr, class... Args>
-    static void callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args);
-
-    /**
-     * @brief Call interthread events. Several events may be called if multiple instance of EthreadType exists.
-     * 
-     * @tparam EthreadType 
-     * @tparam Args 
-     * @param func EThread event function pointer
-     * @param args EThread event function arguments
-     */
-    template<typename EthreadType, class... Args>
-    static void callInterThread(void(EthreadType::* func)(Args...), Args... args);
+    template<typename ObjType, class... Args>
+    void callQueued(void (ObjType::*funcPtr)(Args...), Args... args)
+    {
+        queueNewEvent(std::bind(funcPtr, (ObjType*)this, args...));
+    }
 protected:
     virtual void task(){};      // virtual function that runs in the loop
 
@@ -131,7 +104,7 @@ private:
     std::thread mThread;
 #endif
     // main thread refers the thread that is started blocking the application's thread
-    bool mIsMainThread;
+    bool isInNewThread;
     std::string mName;
     std::mutex mMutexLoop, mMutexEvent;
     std::queue<std::function<void(void)>> mEventQueue;
@@ -151,6 +124,28 @@ private:
 
     static std::map<std::thread::id, EThread*> ethreads;
 friend EThreadObject;
+};
+
+class EThreadObject
+{
+public:
+    explicit EThreadObject(EThread* ethreadPtr = nullptr);
+
+    template<typename ObjType, class... Args>
+    void callQueued(void (ObjType::*funcPtr)(Args...), Args... args)
+    {
+        if(mParentThread == nullptr)
+        {
+            std::cerr
+            <<"[EThread] EThreadObject::callQueued() is called but no EThread is assigned to it."
+            <<std::endl;
+        }
+        mParentThread->queueNewEvent(std::bind(funcPtr, (ObjType*)this, args...));
+    }
+
+    void moveToThread(EThread& ethread);
+private:
+    EThread* mParentThread;
 };
 
 template<typename T>
@@ -187,31 +182,6 @@ private:
 };
 
 }   // namespace ethr
-
-template<typename ObjPtr, typename FuncPtr, class... Args>
-void ethr::EThreadObject::callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args)
-{
-    mParentThread->callQueued(objPtr, funcPtr);
-}
-
-template<typename ObjPtr, typename FuncPtr, class... Args>
-void ethr::EThread::callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args)
-{
-    ((EThread*)objPtr)->queueNewEvent(std::bind(funcPtr, objPtr, args...));
-}
-
-template<typename EthreadType, class... Args>
-void ethr::EThread::callInterThread(void(EthreadType::* func)(Args...), Args... args)
-{
-    for (const auto & [threadId, ethreadPtr] : EThread::ethreads)
-    {
-        if(typeid(*ethreadPtr) == typeid(EthreadType) || dynamic_cast<EthreadType*>(ethreadPtr))
-        {
-            //std::cout<<"match:"<<ethreadPtr->mName<<std::endl;
-            callQueued((EthreadType*) ethreadPtr, func, args...);
-        }
-    }
-}
 
 template<typename T>
 ethr::SafeSharedPtr<T>::SafeSharedPtr()

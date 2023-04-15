@@ -10,18 +10,14 @@ ethr::EThreadObject::EThreadObject(EThread* ethreadPtr)
     //std::cout<<"looking for thread with tid: "<<std::this_thread::get_id()<<std::endl;
     auto foundThread = EThread::ethreads.find(std::this_thread::get_id());
     if(foundThread == EThread::ethreads.end())
-    {
-        std::cerr<<"[EThread] EThreadObject couldn't find Ethread with pid: "<<std::this_thread::get_id()
-        <<". The EThreadObject <"<<typeid(*this).name()<<"> doesn't seem to be created in an EThread environment."<<std::endl;
         return;
-    }
     //std::cout<<"EThread found with name "<<foundThread->second->mName<<std::endl;
     mParentThread = foundThread->second;
 }
 
-void ethr::EThreadObject::moveToThread(ethr::EThread *ethread)
+void ethr::EThreadObject::moveToThread(ethr::EThread& ethread)
 {
-    mParentThread = ethread;
+    mParentThread = &ethread;
 }
 
 ethr::EThread::EThread(const std::string& name)
@@ -37,14 +33,14 @@ ethr::EThread::EThread(const std::string& name)
 ethr::EThread::~EThread()
 {
     /*
-     * stop() should be called explicitly befor thread destruction.
+     * stop() should be called explicitly before thread destruction.
      * otherwise crashes like following will occur:
      *
      * pure virtual method called
      * terminate called without an active exception
      *
-     * stop() is here just in case and it's not safe to terminate a thread with it
-     * since the derived class implementing vitual void task() is destructed prior to EThread itself.
+     * stop() is here just for the context and it's not safe to terminate a ethread with it
+     * since any virtual function overridden by the derived class is destructed prior to EThread itself.
      */
     stop();
 }
@@ -82,7 +78,7 @@ void ethr::EThread::start(bool makeNewThread)
 {
     if(checkLoopRunningSafe()) return;
 
-    mIsMainThread = makeNewThread;
+    isInNewThread = makeNewThread;
 
     if(makeNewThread)
     {
@@ -105,7 +101,7 @@ void ethr::EThread::stop()
     mMutexLoop.lock();
     mIsLoopRunning = false;
     mMutexLoop.unlock();
-    if(!mIsMainThread)
+    if(isInNewThread)
     {
 #ifdef ETHREAD_USE_PTHREAD
         void* ret;
@@ -119,7 +115,8 @@ void ethr::EThread::stop()
 
 void ethr::EThread::queueNewEvent(const std::function<void ()> &func)
 {
-    std::unique_lock<std::mutex> lock(mMutexEvent);
+    std::cout<<"locking "<<mName<<std::endl;
+    std::unique_lock<std::mutex> lock(mMutexEvent);//!!!
     if(mEventQueue.size() < mEventQueueSize) mEventQueue.push(func);
 }
 
