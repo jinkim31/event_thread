@@ -84,9 +84,9 @@ public:
      * @param args arguments
      */
     template<typename ObjType, class... Args>
-    void callQueued(void (ObjType::*funcPtr)(Args...), Args... args)
+    void callQueued(ObjType& objPtr, void (ObjType::*funcPtr)(Args...), Args... args)
     {
-        queueNewEvent(std::bind(funcPtr, (ObjType*)this, args...));
+        queueNewEvent(std::bind(funcPtr, objPtr, args...));
     }
 protected:
     virtual void task(){};      // virtual function that runs in the loop
