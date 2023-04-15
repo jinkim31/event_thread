@@ -7,14 +7,15 @@ ethr::EThreadObject::EThreadObject(EThread* ethreadPtr)
     mParentThread = nullptr;
     if(ethreadPtr != nullptr)
         return;
-    std::cout<<"looking for thread with tid: "<<std::this_thread::get_id()<<std::endl;
+    //std::cout<<"looking for thread with tid: "<<std::this_thread::get_id()<<std::endl;
     auto foundThread = EThread::ethreads.find(std::this_thread::get_id());
     if(foundThread == EThread::ethreads.end())
     {
-        std::cerr<<"[EThread] Something went wrong. EThreadObject couldn't find Ethread with pid: "<<std::this_thread::get_id()<<std::endl;
+        std::cerr<<"[EThread] EThreadObject couldn't find Ethread with pid: "<<std::this_thread::get_id()
+        <<". The EThreadObject <"<<typeid(*this).name()<<"> doesn't seem to be created in an EThread environment."<<std::endl;
         return;
     }
-    std::cout<<"EThread found with name "<<foundThread->second->mName<<std::endl;
+    //std::cout<<"EThread found with name "<<foundThread->second->mName<<std::endl;
     mParentThread = foundThread->second;
 }
 

@@ -191,7 +191,7 @@ private:
 template<typename ObjPtr, typename FuncPtr, class... Args>
 void ethr::EThreadObject::callQueued(ObjPtr objPtr, FuncPtr funcPtr, Args... args)
 {
-    mParentThread->queueNewEvent(std::bind(funcPtr, objPtr, args...));
+    mParentThread->callQueued(objPtr, funcPtr);
 }
 
 template<typename ObjPtr, typename FuncPtr, class... Args>
