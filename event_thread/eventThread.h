@@ -84,18 +84,19 @@ public:
      * @param args arguments
      */
     template<typename ObjType, class... Args>
-    void callQueued(ObjType& objPtr, void (ObjType::*funcPtr)(Args...), Args... args)
+    void callQueued(void (ObjType::*funcPtr)(Args...), Args... args)
     {
-        queueNewEvent(std::bind(funcPtr, objPtr, args...));
+        queueNewEvent(std::bind(funcPtr, (ObjType*)this, args...));
     }
+
+    void handleQueuedEvents();
+
 protected:
     virtual void task(){};      // virtual function that runs in the loop
 
     virtual void onStart(){};   // virtual function that runs once when the thread starts
 
     virtual void onTerminate(){};
-
-    void handleQueuedEvents();
 
 private:
 #ifdef ETHREAD_USE_PTHREAD
