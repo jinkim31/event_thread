@@ -152,7 +152,8 @@ void ethr::EThread::runLoop()
 
     while(checkLoopRunningSafe())
     {
-        while(std::chrono::high_resolution_clock::now() < mNextTaskTime);
+        //while(std::chrono::high_resolution_clock::now() < mNextTaskTime);
+        std::this_thread::sleep_for(mNextTaskTime - std::chrono::high_resolution_clock::now());
         mNextTaskTime += mTaskPeriod;
 
         switch(mEventHandleScheme)
