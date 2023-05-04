@@ -140,6 +140,7 @@ public:
             std::cerr
             <<"[EThread] EThreadObject::callQueued() is called but no EThread is assigned to it."
             <<std::endl;
+            return;
         }
         mParentThread->queueNewEvent(std::bind(funcPtr, (ObjType*)this, args...));
     }

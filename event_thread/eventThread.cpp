@@ -115,8 +115,7 @@ void ethr::EThread::stop()
 
 void ethr::EThread::queueNewEvent(const std::function<void ()> &func)
 {
-    std::cout<<"locking "<<mName<<std::endl;
-    std::unique_lock<std::mutex> lock(mMutexEvent);//!!!
+    std::unique_lock<std::mutex> lock(mMutexEvent);
     if(mEventQueue.size() < mEventQueueSize) mEventQueue.push(func);
 }
 
