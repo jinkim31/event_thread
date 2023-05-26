@@ -91,7 +91,7 @@ protected:
 private:
     std::thread mThread;
     // main thread refers the thread that is started blocking the application's thread
-    bool isInNewThread;
+    bool mIsInNewThread;
     std::string mName;
     std::mutex mMutexLoop, mMutexEvent;
     std::queue<std::function<void(void)>> mEventQueue;

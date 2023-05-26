@@ -78,10 +78,11 @@ void ethr::EThread::start(bool makeNewThread)
 {
     if(checkLoopRunningSafe()) return;
 
-    isInNewThread = makeNewThread;
+    mIsInNewThread = makeNewThread;
 
     if(makeNewThread)
     {
+        mIsLoopRunning = true;
         mThread = std::thread(EThread::threadEntryPoint, this);
     }
     else
@@ -97,7 +98,7 @@ void ethr::EThread::stop()
     mMutexLoop.lock();
     mIsLoopRunning = false;
     mMutexLoop.unlock();
-    if(isInNewThread)
+    if(mIsInNewThread)
     {
         if(mThread.joinable())
             mThread.join();
@@ -136,7 +137,6 @@ void ethr::EThread::handleQueuedEvents()
 void ethr::EThread::runLoop()
 {
     std::unique_lock<std::mutex> lock(mMutexLoop);
-    mIsLoopRunning = true;
     lock.unlock();
 
     onStart();
