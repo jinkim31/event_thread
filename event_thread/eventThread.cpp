@@ -33,7 +33,7 @@ ethr::EThread::EThread(const std::string& name)
 ethr::EThread::~EThread()
 {
     /*
-     * stop() should be called explicitly before thread destruction.
+     * stop() should be called explicitly before EThread destruction.
      * otherwise crashes like following will occur:
      *
      * pure virtual method called
@@ -136,14 +136,10 @@ void ethr::EThread::handleQueuedEvents()
 
 void ethr::EThread::runLoop()
 {
-    std::unique_lock<std::mutex> lock(mMutexLoop);
-    lock.unlock();
-
     onStart();
 
     while(checkLoopRunningSafe())
     {
-        //while(std::chrono::high_resolution_clock::now() < mNextTaskTime);
         std::this_thread::sleep_for(mNextTaskTime - std::chrono::high_resolution_clock::now());
         mNextTaskTime += mTaskPeriod;
 

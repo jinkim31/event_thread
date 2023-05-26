@@ -8,6 +8,7 @@ class Object : public EObject
 public:
     void hi(std::string name){std::cout<<"hi "<<name<<std::endl;}
 };
+
 int main()
 {
     Object o;
@@ -15,6 +16,6 @@ int main()
     o.moveToThread(thread);
     o.callQueued(&Object::hi, std::string("jin"));
     thread.start();
-    //std::this_thread::sleep_for(std::chrono::seconds(1));
+    std::this_thread::sleep_for(std::chrono::seconds(1));
     thread.stop();
 }
