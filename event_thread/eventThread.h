@@ -1,11 +1,6 @@
 #ifndef EVENT_THREAD_H
 #define EVENT_THREAD_H
 
-/*
- * uncomment the following line to use pthread instead of std::thread
- */
-//#define ETHREAD_USE_PTHREAD
-
 #include <iostream>
 #include <mutex>
 #include <shared_mutex>
@@ -15,16 +10,11 @@
 #include <chrono>
 #include <memory>
 #include <map>
-
-#ifdef ETHREAD_USE_PTHREAD
-#include <pthread.h>
-#else
 #include <thread>
-#endif
 
 namespace ethr
 {
-class EThreadObject;
+class EObject;
 
 class EThread
 {
@@ -99,11 +89,7 @@ protected:
     virtual void onTerminate(){};
 
 private:
-#ifdef ETHREAD_USE_PTHREAD
-    pthread_t mThread;
-#else
     std::thread mThread;
-#endif
     // main thread refers the thread that is started blocking the application's thread
     bool isInNewThread;
     std::string mName;
@@ -124,13 +110,13 @@ private:
     static void* threadEntryPoint(void* param);
 
     static std::map<std::thread::id, EThread*> ethreads;
-friend EThreadObject;
+friend EObject;
 };
 
-class EThreadObject
+class EObject
 {
 public:
-    explicit EThreadObject(EThread* ethreadPtr = nullptr);
+    explicit EObject(EThread* ethreadPtr = nullptr);
 
     template<typename ObjType, class... Args>
     void callQueued(void (ObjType::*funcPtr)(Args...), Args... args)
@@ -138,7 +124,7 @@ public:
         if(mParentThread == nullptr)
         {
             std::cerr
-            <<"[EThread] EThreadObject::callQueued() is called but no EThread is assigned to it."
+            <<"[EThread] EObject::callQueued() is called but no EThread is assigned to it."
             <<std::endl;
             return;
         }
@@ -183,7 +169,7 @@ private:
     std::shared_ptr<std::shared_mutex> mMutexPtr;
 };
 
-}   // namespace ethr
+} // namespace ethr
 
 template<typename T>
 ethr::SafeSharedPtr<T>::SafeSharedPtr()

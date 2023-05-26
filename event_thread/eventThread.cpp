@@ -2,7 +2,7 @@
 
 std::map<std::thread::id, ethr::EThread*> ethr::EThread::ethreads;
 
-ethr::EThreadObject::EThreadObject(EThread* ethreadPtr)
+ethr::EObject::EObject(EThread* ethreadPtr)
 {
     mParentThread = nullptr;
     if(ethreadPtr != nullptr)
@@ -15,7 +15,7 @@ ethr::EThreadObject::EThreadObject(EThread* ethreadPtr)
     mParentThread = foundThread->second;
 }
 
-void ethr::EThreadObject::moveToThread(ethr::EThread& ethread)
+void ethr::EObject::moveToThread(ethr::EThread& ethread)
 {
     mParentThread = &ethread;
 }
@@ -82,11 +82,7 @@ void ethr::EThread::start(bool makeNewThread)
 
     if(makeNewThread)
     {
-#ifdef ETHREAD_USE_PTHREAD
-        pthread_create(&mThread, NULL, EThread::threadEntryPoint, this);
-#else
         mThread = std::thread(EThread::threadEntryPoint, this);
-#endif
     }
     else
     {
@@ -103,13 +99,8 @@ void ethr::EThread::stop()
     mMutexLoop.unlock();
     if(isInNewThread)
     {
-#ifdef ETHREAD_USE_PTHREAD
-        void* ret;
-        pthread_join(mThread, &ret);
-#else
         if(mThread.joinable())
             mThread.join();
-#endif
     }
 }
 

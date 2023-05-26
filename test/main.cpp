@@ -3,7 +3,7 @@
 
 using namespace ethr;
 
-class Object : public EThreadObject
+class Object : public EObject
 {
 public:
     void hi(std::string name){std::cout<<"hi "<<name<<std::endl;}
