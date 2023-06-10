@@ -1,4 +1,4 @@
-#include "eventThread.h"
+#include "event_thread.h"
 
 std::map<std::thread::id, ethr::EThread*> ethr::EThread::ethreads;
 
@@ -121,7 +121,8 @@ void *ethr::EThread::threadEntryPoint(void *param)
 
 void ethr::EThread::handleQueuedEvents()
 {
-    while(!mEventQueue.empty())
+    int nQueuedEvent = mEventQueue.size();
+    for(int i=0; i<nQueuedEvent; i++)
     {
         // lock mutex and copy function at the front
         std::unique_lock<std::mutex> eventLock(mMutexEvent);

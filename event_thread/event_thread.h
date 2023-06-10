@@ -131,6 +131,19 @@ public:
         mParentThread->queueNewEvent(std::bind(funcPtr, (ObjType*)this, args...));
     }
 
+    void callQueuedFunctor(const std::function<void(void)>& func)
+    {
+        if(mParentThread == nullptr)
+        {
+            std::cerr
+                    <<"[EThread] EObject::callQueued() is called but no EThread is assigned to it."
+                    <<std::endl;
+            return;
+        }
+        mParentThread->queueNewEvent(func);
+
+    }
+
     void moveToThread(EThread& ethread);
 private:
     EThread* mParentThread;
@@ -149,7 +162,7 @@ public:
     SafeSharedPtr(const SafeSharedPtr& safeSharedPtr);
 
     // minimize code that goes into the lambda since it will be ran in a critical section
-    template<typename Manip>    // functor template avoids relocations. Manip has to be the type: void(const std::shared_ptr<const T>)
+    template<typename Manip>    // functor template avoids reallocation. Manip has to be the type: void(ReadOnlyPtr)
     void readOnly(Manip manip)
     {
         std::shared_lock lock(*mMutexPtr);
@@ -158,7 +171,7 @@ public:
     }
 
     // minimize code that goes into the lambda since it will be ran in a critical section
-    template<typename Manip>    // functor template avoids reallocations. Manip has to be the type: void(const std::shared_ptr<T>)
+    template<typename Manip>    // functor template avoids reallocation. Manip has to be the type: void(ReadWritePtr)
     void readWrite(Manip manip)
     {
         std::unique_lock lock(*mMutexPtr);

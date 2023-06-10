@@ -1,21 +1,17 @@
 #include <iostream>
-#include "../event_thread/eventThread.h"
+#include "../event_thread/event_thread.h"
+#include "../event_thread/event_thread_util.h"
 
 using namespace ethr;
 
-class Object : public EObject
-{
-public:
-    void hi(std::string name){std::cout<<"hi "<<name<<std::endl;}
-};
-
 int main()
 {
-    Object o;
+    ETimer timer;
     EThread thread("test");
-    o.moveToThread(thread);
-    o.callQueued(&Object::hi, std::string("jin"));
+    timer.addTask(0, []{std::cout<<"callback"<<std::endl;}, std::chrono::milliseconds(1000));
+    timer.moveToThread(thread);
     thread.start();
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    timer.start();
+    std::this_thread::sleep_for(std::chrono::seconds(10));
     thread.stop();
 }

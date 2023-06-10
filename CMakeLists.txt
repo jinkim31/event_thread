@@ -4,7 +4,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_library(event_thread STATIC
-    event_thread/eventThread.cpp
+        event_thread/event_thread.cpp
+        event_thread/event_thread_util.cpp
         )
 
 
