@@ -27,14 +27,22 @@ void ethr::ELoopObserver::stop()
 
 void ethr::ETimer::loopObserverCallback()
 {
-    for(auto& [id, task] : mTasks)
+    std::vector<std::map<int, Task>::iterator> ttlExpiredTasks;
+
+    for(auto iter = mTasks.begin(); iter != mTasks.end(); iter++)
     {
-        if(task.nextTaskTime <= std::chrono::high_resolution_clock::now())
+        if(iter->second.nextTaskTime <= std::chrono::high_resolution_clock::now())
         {
-            task.callback();
-            task.nextTaskTime += task.period;
+            iter->second.callback();
+            iter->second.nextTaskTime += iter->second.period;
+
+            if(--iter->second.timeToLive == 0)
+            ttlExpiredTasks.push_back(iter);
         }
     }
+
+    for(const auto& iter : ttlExpiredTasks)
+        mTasks.erase(iter);
 }
 
 void ethr::ETimer::start()
@@ -48,11 +56,12 @@ void ethr::ETimer::stop()
 }
 
 void ethr::ETimer::addTask(
-        const int& id,
+        const int &id,
         const std::function<void(void)> &callback,
-        const std::chrono::high_resolution_clock::duration &period)
+        const std::chrono::high_resolution_clock::duration &period,
+        const int &timeToLive)
 {
-    mTasks.insert({id, {callback, period, std::chrono::high_resolution_clock::now()}});
+    mTasks.insert({id, {callback, period, std::chrono::high_resolution_clock::now(), timeToLive}});
 }
 
 void ethr::ETimer::removeTask(const int &id)

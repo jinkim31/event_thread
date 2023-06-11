@@ -81,11 +81,6 @@ public:
 
     void handleQueuedEvents();
 
-    void notifyEObjectDestruction(EObject* eObjectPtr);
-
-    void addChildEObject(EObject* eObjectPtr);
-    void removeChildEObject(EObject* eObjectPtr);
-
 protected:
     virtual void task(){};      // virtual function that runs in the loop
 
@@ -106,6 +101,7 @@ private:
     bool mIsLoopRunning;
     EventHandleScheme mEventHandleScheme;
     std::vector<EObject*> mChildEObjects;
+    static std::map<std::thread::id, EThread*> ethreads;
 
     bool checkLoopRunningSafe();
 
@@ -115,7 +111,11 @@ private:
 
     static void* threadEntryPoint(void* param);
 
-    static std::map<std::thread::id, EThread*> ethreads;
+    void notifyEObjectDestruction(EObject* eObjectPtr);
+
+    void addChildEObject(EObject* eObjectPtr);
+
+    void removeChildEObject(EObject* eObjectPtr);
 friend EObject;
 };
 
