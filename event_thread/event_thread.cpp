@@ -33,7 +33,8 @@ ethr::EObject::~EObject()
 void ethr::EObject::notifyEThreadDestruction(ethr::EThread *eThreadPtr)
 {
     if(mParentThread != eThreadPtr)
-        std::cerr << "[EThread] EObject::notifyEThreadDestruction(ethr::EThread *eThreadPtr) is called with a wrong EThread pointer."<<std::endl;
+        std::cerr << "[EThread] EObject::notifyEThreadDestruction(ethr::EThread *eThreadPtr) "
+                     "is called with a wrong EThread pointer."<<std::endl;
     mParentThread = nullptr;
 }
 
@@ -127,12 +128,12 @@ void ethr::EThread::stop()
 void ethr::EThread::queueNewEvent(EObject *eObjectPtr, const std::function<void()> &func)
 {
     std::unique_lock<std::mutex> lock(mMutexEvent);
-    if(mEventQueue.size() < mEventQueueSize) mEventQueue.push_back({eObjectPtr, func});
+    if(mEventQueue.size() < mEventQueueSize) mEventQueue.emplace_back(eObjectPtr, func);
 }
 
 void *ethr::EThread::threadEntryPoint(void *param)
 {
-    EThread* ethreadPtr = (EThread*)param;
+    auto* ethreadPtr = (EThread*)param;
     ethreadPtr->mNextTaskTime = std::chrono::high_resolution_clock::now() + ethreadPtr->mTaskPeriod;
     ethreadPtr->runLoop();
     return nullptr;
@@ -140,7 +141,7 @@ void *ethr::EThread::threadEntryPoint(void *param)
 
 void ethr::EThread::handleQueuedEvents()
 {
-    int nQueuedEvent = mEventQueue.size();
+    size_t nQueuedEvent = mEventQueue.size();
     for(int i=0; i<nQueuedEvent; i++)
     {
         // lock mutex and copy function at the front
@@ -207,5 +208,7 @@ void ethr::EThread::addChildEObject(ethr::EObject *eObjectPtr)
 
 void ethr::EThread::removeChildEObject(EObject* eObjectPtr)
 {
-    mChildEObjects.erase(std::remove(mChildEObjects.begin(), mChildEObjects.end(), eObjectPtr), mChildEObjects.end());
-};
+    mChildEObjects.erase(
+            std::remove(mChildEObjects.begin(), mChildEObjects.end(), eObjectPtr),
+            mChildEObjects.end());
+}
