@@ -13,11 +13,28 @@ ethr::EObject::EObject(EThread* ethreadPtr)
         return;
     //std::cout<<"EThread found with name "<<foundThread->second->mName<<std::endl;
     mParentThread = foundThread->second;
+    mParentThread->addChildEObject(this);
 }
 
 void ethr::EObject::moveToThread(ethr::EThread& ethread)
 {
+    if(mParentThread != nullptr)
+        mParentThread->removeChildEObject(this);
+    ethread.addChildEObject(this);
     mParentThread = &ethread;
+}
+
+ethr::EObject::~EObject()
+{
+    if(mParentThread != nullptr)
+        mParentThread->notifyEObjectDestruction(this);
+}
+
+void ethr::EObject::notifyEThreadDestruction(ethr::EThread *eThreadPtr)
+{
+    if(mParentThread != eThreadPtr)
+        std::cerr << "[EThread] EObject::notifyEThreadDestruction(ethr::EThread *eThreadPtr) is called with a wrong EThread pointer."<<std::endl;
+    mParentThread = nullptr;
 }
 
 ethr::EThread::EThread(const std::string& name)
@@ -26,7 +43,7 @@ ethr::EThread::EThread(const std::string& name)
     mEventQueueSize = 1000;
     mIsLoopRunning = false;
     mEventHandleScheme = EventHandleScheme::AFTER_TASK;
-    mTaskPeriod = std::chrono::high_resolution_clock::duration::zero();
+    mTaskPeriod = std::chrono::milliseconds(1);
     ethreads.insert({std::this_thread::get_id(), this});
 }
 
@@ -43,6 +60,8 @@ ethr::EThread::~EThread()
      * since any virtual function overridden by the derived class is destructed prior to EThread itself.
      */
     stop();
+    for(const auto& childEObject : mChildEObjects)
+        childEObject->notifyEThreadDestruction(this);
 }
 
 bool ethr::EThread::checkLoopRunningSafe()
@@ -105,10 +124,10 @@ void ethr::EThread::stop()
     }
 }
 
-void ethr::EThread::queueNewEvent(const std::function<void ()> &func)
+void ethr::EThread::queueNewEvent(EObject *eObjectPtr, const std::function<void()> &func)
 {
     std::unique_lock<std::mutex> lock(mMutexEvent);
-    if(mEventQueue.size() < mEventQueueSize) mEventQueue.push(func);
+    if(mEventQueue.size() < mEventQueueSize) mEventQueue.push_back({eObjectPtr, func});
 }
 
 void *ethr::EThread::threadEntryPoint(void *param)
@@ -126,8 +145,8 @@ void ethr::EThread::handleQueuedEvents()
     {
         // lock mutex and copy function at the front
         std::unique_lock<std::mutex> eventLock(mMutexEvent);
-        auto func = mEventQueue.front();
-        mEventQueue.pop();
+        auto func = mEventQueue.front().second;
+        mEventQueue.pop_front();
         eventLock.unlock();
 
        // execute function
@@ -168,3 +187,25 @@ void ethr::EThread::runLoop()
 
     onTerminate();
 }
+
+void ethr::EThread::notifyEObjectDestruction(ethr::EObject *eObjectPtr)
+{
+    std::unique_lock<std::mutex> eventLock(mMutexEvent);
+    for(auto iter = mEventQueue.begin(); iter != mEventQueue.end() ; iter++)
+    {
+        if(eObjectPtr == iter->first)
+        {
+            mEventQueue.erase(iter);
+        }
+    }
+}
+
+void ethr::EThread::addChildEObject(ethr::EObject *eObjectPtr)
+{
+    mChildEObjects.push_back(eObjectPtr);
+}
+
+void ethr::EThread::removeChildEObject(EObject* eObjectPtr)
+{
+    mChildEObjects.erase(std::remove(mChildEObjects.begin(), mChildEObjects.end(), eObjectPtr), mChildEObjects.end());
+};

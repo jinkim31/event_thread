@@ -33,7 +33,7 @@ private:
     {
         const std::function<void(void)> callback;
         const std::chrono::high_resolution_clock::duration period;
-        std::chrono::time_point<std::chrono::high_resolution_clock> nextTaskTime;
+        std::chrono::high_resolution_clock::time_point nextTaskTime;
     };
     std::map<int, Task> mTasks; // map of {id : task}
     void loopObserverCallback() override;

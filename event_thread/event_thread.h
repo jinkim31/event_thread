@@ -45,7 +45,7 @@ public:
     void setName(const std::string& name);
 
     /**
-     * @brief Set the loop period in nanoseconds.
+     * @brief Set the loop period.
      * 
      * @param period
      */
@@ -76,10 +76,15 @@ public:
     template<typename ObjType, class... Args>
     void callQueued(void (ObjType::*funcPtr)(Args...), Args... args)
     {
-        queueNewEvent(std::bind(funcPtr, (ObjType*)this, args...));
+        queueNewEvent(nullptr, std::bind(funcPtr, (ObjType *) this, args...));
     }
 
     void handleQueuedEvents();
+
+    void notifyEObjectDestruction(EObject* eObjectPtr);
+
+    void addChildEObject(EObject* eObjectPtr);
+    void removeChildEObject(EObject* eObjectPtr);
 
 protected:
     virtual void task(){};      // virtual function that runs in the loop
@@ -94,16 +99,17 @@ private:
     bool mIsInNewThread;
     std::string mName;
     std::mutex mMutexLoop, mMutexEvent;
-    std::queue<std::function<void(void)>> mEventQueue;
+    std::deque<std::pair<EObject*, std::function<void(void)>>> mEventQueue;
     size_t mEventQueueSize;
     std::chrono::high_resolution_clock::duration  mTaskPeriod;
     std::chrono::time_point<std::chrono::high_resolution_clock> mNextTaskTime;
     bool mIsLoopRunning;
     EventHandleScheme mEventHandleScheme;
+    std::vector<EObject*> mChildEObjects;
 
     bool checkLoopRunningSafe();
 
-    void queueNewEvent(const std::function<void ()> &func);
+    void queueNewEvent(EObject *eObjectPtr, const std::function<void()> &func);
 
     void runLoop();
 
@@ -117,6 +123,7 @@ class EObject
 {
 public:
     explicit EObject(EThread* ethreadPtr = nullptr);
+    ~EObject();
 
     template<typename ObjType, class... Args>
     void callQueued(void (ObjType::*funcPtr)(Args...), Args... args)
@@ -124,11 +131,11 @@ public:
         if(mParentThread == nullptr)
         {
             std::cerr
-            <<"[EThread] EObject::callQueued() is called but no EThread is assigned to it."
-            <<std::endl;
+                <<"[EThread] EObject::callQueued() is called but no EThread is assigned to it."
+                <<std::endl;
             return;
         }
-        mParentThread->queueNewEvent(std::bind(funcPtr, (ObjType*)this, args...));
+        mParentThread->queueNewEvent(nullptr, std::bind(funcPtr, (ObjType *) this, args...));
     }
 
     void callQueuedFunctor(const std::function<void(void)>& func)
@@ -136,15 +143,17 @@ public:
         if(mParentThread == nullptr)
         {
             std::cerr
-                    <<"[EThread] EObject::callQueued() is called but no EThread is assigned to it."
-                    <<std::endl;
+                <<"[EThread] EObject::callQueued() is called but no EThread is assigned to it."
+                <<std::endl;
             return;
         }
-        mParentThread->queueNewEvent(func);
+        mParentThread->queueNewEvent(nullptr, func);
 
     }
 
     void moveToThread(EThread& ethread);
+
+    void notifyEThreadDestruction(EThread* eThreadPtr);
 private:
     EThread* mParentThread;
 };
