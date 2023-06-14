@@ -4,14 +4,19 @@ std::map<std::thread::id, ethr::EThread*> ethr::EThread::ethreads;
 
 ethr::EObject::EObject(EThread* ethreadPtr)
 {
-    mParentThread = nullptr;
+    mParentThread = ethreadPtr;
+    // return if ethread is explicitly assigned
     if(ethreadPtr != nullptr)
+    {
+        mParentThread->addChildEObject(this);
         return;
-    //std::cout<<"looking for thread with tid: "<<std::this_thread::get_id()<<std::endl;
+    }
+    // find main ethread
     auto foundThread = EThread::ethreads.find(std::this_thread::get_id());
+    // return if not found
     if(foundThread == EThread::ethreads.end())
         return;
-    //std::cout<<"EThread found with name "<<foundThread->second->mName<<std::endl;
+    // assign found ethread
     mParentThread = foundThread->second;
     mParentThread->addChildEObject(this);
 }
@@ -54,13 +59,16 @@ ethr::EThread::~EThread()
      * stop() should be called explicitly before EThread destruction.
      * otherwise crashes like following will occur:
      *
+     * "
      * pure virtual method called
      * terminate called without an active exception
+     * "
      *
      * stop() is here just for the context and it's not safe to terminate a ethread with it
      * since any virtual function overridden by the derived class is destructed prior to EThread itself.
      */
     stop();
+
     for(const auto& childEObject : mChildEObjects)
         childEObject->notifyEThreadDestruction(this);
 }

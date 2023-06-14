@@ -9,7 +9,7 @@ int main()
     ETimer timer;
     EThread thread("test");
     timer.addTask(0, []
-    { std::cout << "callback" << std::endl; }, std::chrono::milliseconds(1000), 1);
+    { std::cout << "callback" << std::endl; }, std::chrono::milliseconds(1000));
     timer.moveToThread(thread);
     thread.start();
     timer.start();
