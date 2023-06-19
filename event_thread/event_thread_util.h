@@ -28,7 +28,7 @@ public:
             const std::function<void(void)> &callback,
             const std::chrono::high_resolution_clock::duration &period,
             const int &timeToLive = -1);
-    void removeTask(const int& id);
+    void removeTask(const int &id);
 private:
     struct Task
     {
@@ -51,30 +51,70 @@ public:
     SafeSharedPtr();
     explicit SafeSharedPtr(std::shared_ptr<T> var);
     // copy constructor
-    SafeSharedPtr(const SafeSharedPtr& safeSharedPtr);
+    SafeSharedPtr(const SafeSharedPtr &safeSharedPtr);
 
     // minimize code that goes into the lambda since it will be ran in a critical section
-    template<typename Manip>    // functor template avoids reallocation. Manip has to be the type: void(ReadOnlyPtr)
+    template<typename Manip>
+    // functor template avoids reallocation. Manip has to be the type: void(ReadOnlyPtr)
     void readOnly(Manip manip)
     {
         std::shared_lock lock(*mMutexPtr);
-        const std::shared_ptr<const T>& constVar = mVar;
+        const std::shared_ptr<const T> &constVar = mVar;
         manip(constVar);
     }
 
     // minimize code that goes into the lambda since it will be ran in a critical section
-    template<typename Manip>    // functor template avoids reallocation. Manip has to be the type: void(ReadWritePtr)
+    template<typename Manip>
+    // functor template avoids reallocation. Manip has to be the type: void(ReadWritePtr)
     void readWrite(Manip manip)
     {
         std::unique_lock lock(*mMutexPtr);
         manip(mVar);
     }
+
 private:
     std::shared_ptr<T> mVar;
     std::shared_ptr<std::shared_mutex> mMutexPtr;
 };
 
-}
+
+template<typename InputType, typename OutputType>
+class EPromise
+{
+public:
+    template<typename EObjectType>
+    EPromise(EObjectType *eObjectPtr, OutputType(EObjectType::*funcPtr)(InputType))
+    {
+        mTargetEObjectPtr = eObjectPtr;
+        mExecuteFunctor = [=](InputType input){ return (*eObjectPtr.*funcPtr)(input); };
+        mThenAssigned = false;
+    }
+
+    void execute(InputType value)
+    {
+        EObject::runQueued(mTargetEObjectPtr, [=]
+        {
+            auto ret = mExecuteFunctor(value);
+            if(mThenAssigned) mExecuteThenFunctor(ret);
+        });
+    }
+
+    template<typename ThenOutputType, typename EObjectType>
+    EPromise<OutputType, ThenOutputType>& then(
+            EObjectType *eObjectPtr,
+            ThenOutputType(EObjectType::*funcPtr)(OutputType))
+    {
+        auto thenPromise = new EPromise<OutputType, ThenOutputType>(eObjectPtr, funcPtr);
+        mExecuteThenFunctor = [=](OutputType output){ thenPromise->execute(output); };
+        mThenAssigned = true;
+        return (*thenPromise);
+    }
+private:
+    EObject *mTargetEObjectPtr;
+    std::function<void(OutputType)> mExecuteThenFunctor;
+    std::function<OutputType(InputType)> mExecuteFunctor;
+    bool mThenAssigned;
+};
 
 template<typename T>
 ethr::SafeSharedPtr<T>::SafeSharedPtr()
@@ -96,4 +136,5 @@ ethr::SafeSharedPtr<T>::SafeSharedPtr(const SafeSharedPtr &safeSharedPtr)
     mMutexPtr = safeSharedPtr.mMutexPtr;
 }
 
+}
 #endif
