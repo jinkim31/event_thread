@@ -6,44 +6,51 @@
 
 using namespace ethr;
 
-class PromiseRejectedException : public std::runtime_error
-{
-public:
-    explicit PromiseRejectedException(const std::string& msg) : runtime_error(msg.c_str())
-    {};
-};
-
-
-class A : public EObject
-{
-public:
-    int rand(int seed)
-    {
-        std::cout<<"rand "<<seed<<std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        return 123;
-    }
-};
-
-class B : public EObject
+class Adder : public EObject
 {
 public:
     int add(int num)
     {
-        std::cout<<"add "<<num<<std::endl;
+        int res = num + 1;
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        return num+1;
+        std::cout<<"+ : "<<num<<"->"<<res<<std::endl;
+        return res;
     }
 };
 
-class C : public EObject
+class Subtractor : public EObject
 {
 public:
-    int mul(int num)
+    int subtract(int num)
     {
-        std::cout<<"mul "<<num<<std::endl;
+        int res = num - 1;
         std::this_thread::sleep_for(std::chrono::milliseconds(500));
-        return num*2;
+        std::cout<<"- : "<<num<<"->"<<res<<std::endl;
+        return res;
+    }
+};
+
+class Multiplier : public EObject
+{
+public:
+    int multiply(int num)
+    {
+        int res = num * 2;
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::cout<<"* : "<<num<<"->"<<res<<std::endl;
+        return res;
+    }
+};
+
+class Divider : public EObject
+{
+public:
+    int divide(int num)
+    {
+        int res = num / 2;
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::cout<<"/ : "<<num<<"->"<<res<<std::endl;
+        return res;
     }
 };
 
@@ -51,61 +58,40 @@ class Main : public EObject
 {
 public:
     ETimer timer;
-    EThread threadA, threadB, threadC;
-    A a;
-    B b;
-    C c;
+    EThread thread1, thread2, thread3, thread4;
+    Adder adder;
+    Subtractor subtractor;
+    Multiplier multiplier;
+    Divider divider;
 
-    std::unique_ptr<EPromise<int, int>> promise;
+    EPromise<int, int> promise;
 
     Main()
     {
-        a.moveToThread(threadA);
-        b.moveToThread(threadB);
-        c.moveToThread(threadC);
-        threadA.start();
-        threadB.start();
-        threadC.start();
+        adder.moveToThread(thread1);
+        subtractor.moveToThread(thread2);
+        multiplier.moveToThread(thread3);
+        divider.moveToThread(thread4);
+        thread1.start();
+        thread2.start();
+        thread3.start();
+        thread4.start();
 
-        promise = std::make_unique<EPromise<int, int>>(&a, &A::rand);
-        promise->then(&b, &B::add)
-        .then(&c, &C::mul)
-        .then(&b, &B::add)
-        .then(&c, &C::mul)
-        .then(&b, &B::add)
-        .then(&c, &C::mul);
+        promise = EPromise(&adder, &Adder::add);
+        promise.then(&multiplier, &Multiplier::multiply)
+        .then(&adder, &Adder::add)
+        .then(&multiplier, &Multiplier::multiply);
 
         timer.addTask(0, [&]{
-
-
-            promise->execute(123);
-
-            /*
-            runQueued(&a, [&]
-            {
-                try
-                {
-                    auto r = a.rand(4);
-                    runQueued(&b, [&]
-                    {
-                        try
-                        {
-                            b.print(r);
-                        }
-                        catch (const PromiseRejectedException &e)
-                        {
-                            std::cout << "ERROR " << e.what() << std::endl;
-                        }
-                    });
-                }
-                catch(const PromiseRejectedException &e)
-                {
-                    std::cout << "ERROR " << e.what() << std::endl;
-                }
-            });*/
+            promise.execute(1);
         }, std::chrono::milliseconds(1000), 1);
 
         timer.start();
+    }
+
+    void handleException(std::exception_ptr prt)
+    {
+        std::cout<<"exception!!"<<std::endl;
     }
 };
 
@@ -114,7 +100,5 @@ int main()
     EThread mainThread;
     Main main;
     main.moveToThread(mainThread);
-    mainThread.start();
-    std::this_thread::sleep_for(std::chrono::seconds(20));
-    mainThread.stop();
+    mainThread.start(false);
 }

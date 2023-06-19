@@ -78,42 +78,89 @@ private:
 };
 
 
-template<typename InputType, typename OutputType>
-class EPromise
+class EDeletable
 {
 public:
-    template<typename EObjectType>
-    EPromise(EObjectType *eObjectPtr, OutputType(EObjectType::*funcPtr)(InputType))
+    virtual ~EDeletable()= default;
+};
+
+template<typename PromiseType, typename... ParamTypes>
+class EPromise : public EDeletable
+{
+public:
+    EPromise()
     {
-        mTargetEObjectPtr = eObjectPtr;
-        mExecuteFunctor = [=](InputType input){ return (*eObjectPtr.*funcPtr)(input); };
-        mThenAssigned = false;
+        mInitialized = false;
     }
 
-    void execute(InputType value)
+    template<typename EObjectType>
+    EPromise(EObjectType *eObjectPtr, PromiseType(EObjectType::*funcPtr)(ParamTypes...))
     {
+        mTargetEObjectPtr = eObjectPtr;
+        //mExecuteFunctor = [=](ParamTypes... params){ return (*eObjectPtr.*funcPtr)(params...); };
+        mExecuteFunctor = std::bind(funcPtr, eObjectPtr, std::placeholders::_1);
+        mThenPromisePtr = nullptr;
+        mCatchEObjectPtr = nullptr;
+        mInitialized = true;
+    }
+
+    ~EPromise()
+    {
+        if(mThenPromisePtr != nullptr)
+            delete mThenPromisePtr;
+    }
+
+    void execute(ParamTypes... params)
+    {
+        if(!mInitialized)
+            return;
+
         EObject::runQueued(mTargetEObjectPtr, [=]
         {
-            auto ret = mExecuteFunctor(value);
-            if(mThenAssigned) mExecuteThenFunctor(ret);
+            PromiseType ret;
+            try{
+                ret = mExecuteFunctor(params...);
+                if(mThenPromisePtr != nullptr) mExecuteThenFunctor(ret);
+            }
+            catch(...) {
+                if(mCatchEObjectPtr != nullptr)
+                {
+                    EObject::runQueued(mCatchEObjectPtr, [=]
+                    { mCatchFunctor(std::current_exception()); });
+                }
+            }
         });
     }
 
-    template<typename ThenOutputType, typename EObjectType>
-    EPromise<OutputType, ThenOutputType>& then(
+    template<typename EObjectType>
+    EPromise<PromiseType, ParamTypes...>& cat(
             EObjectType *eObjectPtr,
-            ThenOutputType(EObjectType::*funcPtr)(OutputType))
+            void(EObjectType::*funcPtr)(std::exception_ptr))
     {
-        auto thenPromise = new EPromise<OutputType, ThenOutputType>(eObjectPtr, funcPtr);
-        mExecuteThenFunctor = [=](OutputType output){ thenPromise->execute(output); };
-        mThenAssigned = true;
+        mCatchEObjectPtr = eObjectPtr;
+        mCatchFunctor = std::bind(funcPtr, eObjectPtr, std::placeholders::_1);
+        return *this;
+    }
+
+    template<typename ThenPromiseType, typename EObjectType>
+    EPromise<PromiseType, ThenPromiseType>& then(
+            EObjectType *eObjectPtr,
+            ThenPromiseType(EObjectType::*funcPtr)(PromiseType))
+    {
+        auto thenPromise = new EPromise<PromiseType, ThenPromiseType>(eObjectPtr, funcPtr);
+        mExecuteThenFunctor = [=](PromiseType output){ thenPromise->execute(output); };
+        mThenPromisePtr = thenPromise;
         return (*thenPromise);
     }
+
 private:
+    bool mInitialized;
     EObject *mTargetEObjectPtr;
-    std::function<void(OutputType)> mExecuteThenFunctor;
-    std::function<OutputType(InputType)> mExecuteFunctor;
-    bool mThenAssigned;
+    std::function<void(PromiseType)> mExecuteThenFunctor;
+    std::function<PromiseType(ParamTypes...)> mExecuteFunctor;
+    EObject *mCatchEObjectPtr;
+    std::function<void(std::exception_ptr)> mCatchFunctor;
+    EDeletable* mThenPromisePtr;
 };
 
 template<typename T>

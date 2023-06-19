@@ -108,15 +108,11 @@ void ethr::EThread::start(bool makeNewThread)
 
     mIsInNewThread = makeNewThread;
 
+    mIsLoopRunning = true;
     if(makeNewThread)
-    {
-        mIsLoopRunning = true;
         mThread = std::thread(EThread::threadEntryPoint, this);
-    }
     else
-    {
         EThread::threadEntryPoint(this);
-    }
 }
 
 void ethr::EThread::stop()
