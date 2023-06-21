@@ -1,6 +1,6 @@
 # event_thread
 
-### Asynchronous multithreading framework
+### Async multithreading framework
 
 ## Run demo
 ```console

@@ -1,8 +1,10 @@
 #include <iostream>
-#include "../event_thread/event_thread.h"
-#include "../event_thread/event_thread_util.h"
+#include "ethread.h"
+#include "../event_thread/eptr.h"
 #include <stdexcept>
 #include <memory>
+#include <etimer.h>
+#include <epromise.h>
 
 using namespace ethr;
 

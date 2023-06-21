@@ -1,4 +1,4 @@
-#include "event_thread_util.h"
+#include "etimer.h"
 
 ethr::ELoopObserver::ELoopObserver()
 {
@@ -37,7 +37,7 @@ void ethr::ETimer::loopObserverCallback()
             iter->second.nextTaskTime += iter->second.period;
 
             if(--iter->second.timeToLive == 0)
-            ttlExpiredTasks.push_back(iter);
+                ttlExpiredTasks.push_back(iter);
         }
     }
 

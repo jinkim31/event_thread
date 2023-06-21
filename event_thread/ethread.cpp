@@ -1,4 +1,4 @@
-#include "event_thread.h"
+#include "ethread.h"
 
 std::map<std::thread::id, ethr::EThread*> ethr::EThread::ethreads;
 

@@ -114,7 +114,7 @@ class EObject
 {
 public:
     explicit EObject(EThread *ethreadPtr = nullptr);
-    ~EObject();
+    virtual ~EObject();
 
     template<typename ObjType, class... Args>
     void callQueued(void (ObjType::*funcPtr)(Args...), Args... args)
