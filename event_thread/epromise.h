@@ -3,6 +3,12 @@
 
 #include "ethread.h"
 
+class ExceptionNotCaughtException : public std::runtime_error
+{
+public:
+    ExceptionNotCaughtException(const std::string& what) : std::runtime_error(what){}
+};
+
 namespace ethr
 {
 
@@ -21,16 +27,18 @@ public:
         mInitialized = false;
     }
 
-    template<typename EObjectType>
-    EPromise(EObjectType *eObjectPtr, PromiseType(EObjectType::*funcPtr)(ParamTypes...))
+    EPromise(EObject *eObjectPtr, const std::function<PromiseType(ParamTypes...)> functor)
     {
         mTargetEObjectPtr = eObjectPtr;
-        //mExecuteFunctor = [=](ParamTypes... params){ return (*eObjectPtr.*funcPtr)(params...); };
-        mExecuteFunctor = std::bind(funcPtr, eObjectPtr, std::placeholders::_1);
+        mExecuteFunctor = functor;
         mThenPromisePtr = nullptr;
         mCatchEObjectPtr = nullptr;
         mInitialized = true;
     }
+
+    template<typename EObjectType>
+    EPromise(EObjectType *eObjectPtr, PromiseType(EObjectType::*funcPtr)(ParamTypes...))
+    : EPromise(eObjectPtr, std::bind(funcPtr, eObjectPtr, std::placeholders::_1)){}
 
     ~EPromise()
     {
@@ -50,12 +58,15 @@ public:
                 if (mThenPromisePtr) mExecuteThenFunctor(mExecuteFunctor(params...));
                 else mExecuteFunctor(params...);
             }
-            catch (...)
+            catch (const std::exception& e)
             {
                 if (!mCatchEObjectPtr)
-                    return;
-                EObject::runQueued(mCatchEObjectPtr, [=]
-                { mCatchFunctor(std::current_exception()); });
+                    throw ExceptionNotCaughtException(
+                            "[EThread] Detected uncaught exception: \"" + std::string(e.what())
+                            + "\". Use EPromise::cat() to catch the exception.");
+
+                std::exception_ptr eptr = std::current_exception();
+                EObject::runQueued(mCatchEObjectPtr, [=]{mCatchFunctor(eptr);});
             }
         });
     }
@@ -70,12 +81,33 @@ public:
         return *this;
     }
 
+    EPromise<PromiseType, ParamTypes...> &cat(
+            EObject *eObjectPtr,
+            const std::function<void(std::exception_ptr)> functor)
+    {
+        mCatchEObjectPtr = eObjectPtr;
+        mCatchFunctor = functor;
+        return *this;
+    }
+
     template<typename ThenPromiseType, typename EObjectType>
     EPromise<PromiseType, ThenPromiseType> &then(
             EObjectType *eObjectPtr,
             ThenPromiseType(EObjectType::*funcPtr)(PromiseType))
     {
         auto thenPromise = new EPromise<PromiseType, ThenPromiseType>(eObjectPtr, funcPtr);
+        mExecuteThenFunctor = [=](PromiseType output)
+        { thenPromise->execute(output); };
+        mThenPromisePtr = thenPromise;
+        return (*thenPromise);
+    }
+
+    template<typename ThenPromiseType>
+    EPromise<PromiseType, ThenPromiseType> &then(
+            EObject *eObjectPtr,
+            const std::function<ThenPromiseType(PromiseType)>& functor)
+    {
+        auto thenPromise = new EPromise<PromiseType, ThenPromiseType>(eObjectPtr, functor);
         mExecuteThenFunctor = [=](PromiseType output)
         { thenPromise->execute(output); };
         mThenPromisePtr = thenPromise;
