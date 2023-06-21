@@ -3,14 +3,14 @@
 
 #include "ethread.h"
 
+namespace ethr
+{
+
 class ExceptionNotCaughtException : public std::runtime_error
 {
 public:
     ExceptionNotCaughtException(const std::string& what) : std::runtime_error(what){}
 };
-
-namespace ethr
-{
 
 class EDeletable
 {
