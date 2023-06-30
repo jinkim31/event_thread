@@ -61,7 +61,9 @@ void ethr::ETimer::addTask(
         const std::chrono::high_resolution_clock::duration &period,
         const int &timeToLive)
 {
-    mTasks.insert({id, {callback, period, std::chrono::high_resolution_clock::now() + period, timeToLive}});
+    mTasks.insert({
+        id,
+        {callback, period, std::chrono::high_resolution_clock::now() + period, timeToLive}});
 }
 
 void ethr::ETimer::removeTask(const int &id)

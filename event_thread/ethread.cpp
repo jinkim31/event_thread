@@ -1,6 +1,7 @@
 #include "ethread.h"
 
-std::map<std::thread::id, ethr::EThread*> ethr::EThread::ethreads;
+std::map<std::thread::id, ethr::EThread*> ethr::EThread::eThreads;
+ethr::EThread* ethr::EThread::mainEThreadPtr = nullptr;
 
 ethr::EObject::EObject(EThread* ethreadPtr)
 {
@@ -12,9 +13,9 @@ ethr::EObject::EObject(EThread* ethreadPtr)
         return;
     }
     // find main ethread
-    auto foundThread = EThread::ethreads.find(std::this_thread::get_id());
+    auto foundThread = EThread::eThreads.find(std::this_thread::get_id());
     // return if not found
-    if(foundThread == EThread::ethreads.end())
+    if(foundThread == EThread::eThreads.end())
         return;
     // assign found ethread
     mParentThread = foundThread->second;
@@ -50,7 +51,7 @@ ethr::EThread::EThread(const std::string& name)
     mIsLoopRunning = false;
     mEventHandleScheme = EventHandleScheme::AFTER_TASK;
     mTaskPeriod = std::chrono::milliseconds(1);
-    ethreads.insert({std::this_thread::get_id(), this});
+    eThreads.insert({std::this_thread::get_id(), this});
 }
 
 ethr::EThread::~EThread()
@@ -102,17 +103,20 @@ void ethr::EThread::setEventHandleScheme(EventHandleScheme scheme)
     mEventHandleScheme = scheme;
 }
 
-void ethr::EThread::start(bool makeNewThread)
+void ethr::EThread::start(bool isMain)
 {
     if(checkLoopRunningSafe()) return;
 
-    mIsInNewThread = makeNewThread;
+    mIsMain = isMain;
 
     mIsLoopRunning = true;
-    if(makeNewThread)
+    if(!mIsMain)
         mThread = std::thread(EThread::threadEntryPoint, this);
     else
+    {
+        mainEThreadPtr = this;
         EThread::threadEntryPoint(this);
+    }
 }
 
 void ethr::EThread::stop()
@@ -122,7 +126,7 @@ void ethr::EThread::stop()
     mMutexLoop.lock();
     mIsLoopRunning = false;
     mMutexLoop.unlock();
-    if(mIsInNewThread)
+    if(!mIsMain)
     {
         if(mThread.joinable())
             mThread.join();
@@ -157,6 +161,16 @@ void ethr::EThread::handleQueuedEvents()
        // execute function
        func();
     }
+}
+
+void ethr::EThread::stopMainEThread()
+{
+    if(mainEThreadPtr)
+        mainEThreadPtr->stop();
+    else
+        throw MainEThreadNotAssignedException(
+                "No EThread is assigned as main. "
+                "Main EThread is assigned by calling EThread::start(true) with isMain=true argument.");
 }
 
 void ethr::EThread::runLoop()

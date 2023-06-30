@@ -26,6 +26,12 @@ public:
         USER_CONTROLLED,
     };
 
+    class MainEThreadNotAssignedException : public std::runtime_error
+    {
+    public:
+        MainEThreadNotAssignedException(const std::string& what) : std::runtime_error(what){}
+    };
+
     explicit EThread(const std::string &name = "unnamed");
 
     ~EThread();
@@ -34,7 +40,7 @@ public:
      * @brief Start thread.
      *
      */
-    void start(bool makeNewThread = true);
+    void start(bool isMain = false);
 
     /**
      * @brief Stop thread. This should be called before EThread destruction.
@@ -70,6 +76,8 @@ public:
 
     void handleQueuedEvents();
 
+    static void stopMainEThread();
+
 protected:
     virtual void task()
     {};      // virtual function that runs in the loop
@@ -82,7 +90,7 @@ protected:
 
 private:
     std::thread mThread;
-    bool mIsInNewThread;
+    bool mIsMain;
     std::string mName;
     std::mutex mMutexLoop, mMutexEvent;
     std::deque<std::pair<EObject *, std::function<void(void)>>> mEventQueue;
@@ -92,7 +100,8 @@ private:
     bool mIsLoopRunning;
     EventHandleScheme mEventHandleScheme;
     std::vector<EObject *> mChildEObjects;
-    static std::map<std::thread::id, EThread *> ethreads;
+    static std::map<std::thread::id, EThread *> eThreads;
+    static EThread* mainEThreadPtr;
 
     bool checkLoopRunningSafe();
 
@@ -107,6 +116,7 @@ private:
     void addChildEObject(EObject *eObjectPtr);
 
     void removeChildEObject(EObject *eObjectPtr);
+
     friend EObject;
 };
 

@@ -79,8 +79,8 @@ public:
 
         promise = EPromise(&adder, &Adder::add);
         /*
-         * EPromise supports then chaining.
-         * Provide pointer to an EObject and function pointer to one of the EObject's functions.
+         * EPromise supports then() chaining.
+         * Provide pointer to an EObject and function pointer to one of the object's functions.
          * The function will run in the EObject's thread.
          */
         promise
@@ -88,7 +88,7 @@ public:
         .then(&multiplier, &Multiplier::multiply)
         .then(&subtractor, &Subtractor::subtract)
         /*
-         * When using lambda for EPromise::then(), specify the return value(<int>) of the lambda.
+         * When using lambda for EPromise::then(), specify the return value(.then<int>) of the lambda.
          */
         .then<int>(this, [](int num){
             int res = num + 10;
@@ -96,25 +96,26 @@ public:
             return res;
         })
         /*
-         * Calling Divider::divide() will throw exception. EPromise::cat() is here to catch the exception.
+         * Calling Divider::divide() will throw exception(see the function definition).
+         * EPromise::cat() is here to catch the exception.
          */
         .then(&divider, &Divider::divide)
         .cat(this, &Main::handleException);
         /*
-         * EPromise::cat() can be used with a lambda like the following.
+         * EPromise::cat() can be used with a lambda like the following. The lambda should not return anything
          *
          * .cat(this, [](std::exception_ptr eptr){
          *     exception handling here
          * });
          *
-         * */
+         */
 
         /*
          * ETimer is used to execute the promise once(note that timeToLive is 1).
          */
         timer.addTask(0, [&]{
             promise.execute(1);
-        }, std::chrono::milliseconds(1000), 1);
+        }, std::chrono::milliseconds(2000), 3);
         timer.start();
     }
 
@@ -123,6 +124,7 @@ public:
         std::cout<<"exception caught(this is an expected result): ";
         try{if(exceptionPtr) std::rethrow_exception(exceptionPtr);}
         catch(const std::runtime_error& e){std::cout<<e.what()<<std::endl;}
+        EThread::stopMainEThread();
     }
 };
 
@@ -131,5 +133,7 @@ int main()
     EThread mainThread;
     Main main;
     main.moveToThread(mainThread);
-    mainThread.start(false);
+    mainThread.start();
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+    mainThread.stop();
 }

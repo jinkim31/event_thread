@@ -31,5 +31,5 @@ int main()
     EThread mainThread;
     Main main;
     main.moveToThread(mainThread);
-    mainThread.start(false);
+    mainThread.start(true);
 }
