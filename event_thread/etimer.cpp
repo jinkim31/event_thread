@@ -66,7 +66,9 @@ void ethr::ETimer::addTask(
         {callback, period, std::chrono::high_resolution_clock::now() + period, timeToLive}});
 }
 
-void ethr::ETimer::removeTask(const int &id)
+bool ethr::ETimer::removeTask(const int &id)
 {
+    bool taskExists = mTasks.find(id) != mTasks.end();
     mTasks.erase(id);
+    return taskExists;
 }

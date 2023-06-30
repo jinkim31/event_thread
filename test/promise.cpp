@@ -111,11 +111,11 @@ public:
          */
 
         /*
-         * ETimer is used to execute the promise once(note that timeToLive is 1).
+         * ETimer is used to execute the promise once(note that timeToLive is set to 1).
          */
         timer.addTask(0, [&]{
             promise.execute(1);
-        }, std::chrono::milliseconds(2000), 3);
+        }, std::chrono::milliseconds(1000), 1);
         timer.start();
     }
 
@@ -124,7 +124,7 @@ public:
         std::cout<<"exception caught(this is an expected result): ";
         try{if(exceptionPtr) std::rethrow_exception(exceptionPtr);}
         catch(const std::runtime_error& e){std::cout<<e.what()<<std::endl;}
-        EThread::stopMainEThread();
+        EThread::stopMainThread();
     }
 };
 
@@ -133,7 +133,5 @@ int main()
     EThread mainThread;
     Main main;
     main.moveToThread(mainThread);
-    mainThread.start();
-    std::this_thread::sleep_for(std::chrono::seconds(10));
-    mainThread.stop();
+    mainThread.start(true);
 }

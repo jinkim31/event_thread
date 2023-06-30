@@ -31,6 +31,11 @@ public:
     public:
         MainEThreadNotAssignedException(const std::string& what) : std::runtime_error(what){}
     };
+    class MainEThreadAlreadyAssignedException : public std::runtime_error
+    {
+    public:
+        MainEThreadAlreadyAssignedException(const std::string& what) : std::runtime_error(what){}
+    };
 
     explicit EThread(const std::string &name = "unnamed");
 
@@ -76,7 +81,7 @@ public:
 
     void handleQueuedEvents();
 
-    static void stopMainEThread();
+    static void stopMainThread();
 
 protected:
     virtual void task()

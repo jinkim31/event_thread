@@ -105,13 +105,18 @@ void ethr::EThread::setEventHandleScheme(EventHandleScheme scheme)
 
 void ethr::EThread::start(bool isMain)
 {
-    if(checkLoopRunningSafe()) return;
+    if(checkLoopRunningSafe())
+        return;
+    if(isMain && mainEThreadPtr)
+        throw MainEThreadAlreadyAssignedException("You can only assign one EThread as main.");
 
     mIsMain = isMain;
-
     mIsLoopRunning = true;
+
     if(!mIsMain)
+    {
         mThread = std::thread(EThread::threadEntryPoint, this);
+    }
     else
     {
         mainEThreadPtr = this;
@@ -163,7 +168,7 @@ void ethr::EThread::handleQueuedEvents()
     }
 }
 
-void ethr::EThread::stopMainEThread()
+void ethr::EThread::stopMainThread()
 {
     if(mainEThreadPtr)
         mainEThreadPtr->stop();

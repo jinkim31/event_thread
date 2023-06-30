@@ -28,7 +28,7 @@ public:
             const std::function<void(void)> &callback,
             const std::chrono::high_resolution_clock::duration &period,
             const int &timeToLive = -1);
-    void removeTask(const int &id);
+    bool removeTask(const int &id);
 private:
     struct Task
     {
