@@ -15,6 +15,9 @@ find_package(Threads REQUIRED)
 target_link_libraries(event_thread PRIVATE Threads::Threads)
 target_include_directories(event_thread PUBLIC ${PROJECT_SOURCE_DIR}/event_thread)
 
+add_executable(test_itc test/itc.cpp)
+target_link_libraries(test_itc PRIVATE event_thread)
+
 add_executable(test_timer test/timer.cpp)
 target_link_libraries(test_timer PRIVATE event_thread)
 

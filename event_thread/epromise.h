@@ -22,13 +22,9 @@ template<typename PromiseType, typename... ParamTypes>
 class EPromise : public EDeletable
 {
 public:
-    EPromise()
-    {
-        mInitialized = false;
-    }
-
     EPromise(EObject *eObjectPtr, const std::function<PromiseType(ParamTypes...)> functor)
     {
+        std::cout<<"EPromise construct"<<std::endl;
         mTargetEObjectPtr = eObjectPtr;
         mExecuteFunctor = functor;
         mThenPromisePtr = nullptr;
@@ -38,7 +34,7 @@ public:
 
     template<typename EObjectType>
     EPromise(EObjectType *eObjectPtr, PromiseType(EObjectType::*funcPtr)(ParamTypes...))
-    : EPromise(eObjectPtr, std::bind(funcPtr, eObjectPtr, std::placeholders::_1)){}
+    : EPromise(eObjectPtr, [=](ParamTypes... params){return ((*eObjectPtr).*funcPtr)(params...);}){}
 
     ~EPromise()
     {
@@ -46,6 +42,11 @@ public:
             delete mThenPromisePtr;
     }
 
+    void selfDestructChain()
+    {
+        // TODO: destruct promises after exception catch
+        delete this;
+    }
     void execute(ParamTypes... params)
     {
         if (!mInitialized)
@@ -57,6 +58,8 @@ public:
             {
                 if (mThenPromisePtr) mExecuteThenFunctor(mExecuteFunctor(params...));
                 else mExecuteFunctor(params...);
+                std::cout<<"EPromise destruct"<<std::endl;
+                delete this;
             }
             catch (const std::exception& e)
             {
@@ -66,7 +69,9 @@ public:
                             + "\". Use EPromise::cat() to catch the exception.");
 
                 std::exception_ptr eptr = std::current_exception();
-                EObject::runQueued(mCatchEObjectPtr, [=]{mCatchFunctor(eptr);});
+                EObject::runQueued(mCatchEObjectPtr, [=]{
+                    mCatchFunctor(eptr);
+                });
             }
         });
     }
@@ -91,11 +96,11 @@ public:
     }
 
     template<typename ThenPromiseType, typename EObjectType>
-    EPromise<PromiseType, ThenPromiseType> &then(
+    EPromise<ThenPromiseType, PromiseType> &then(
             EObjectType *eObjectPtr,
             ThenPromiseType(EObjectType::*funcPtr)(PromiseType))
     {
-        auto thenPromise = new EPromise<PromiseType, ThenPromiseType>(eObjectPtr, funcPtr);
+        auto thenPromise = new EPromise<ThenPromiseType, PromiseType>(eObjectPtr, funcPtr);
         mExecuteThenFunctor = [=](PromiseType output)
         { thenPromise->execute(output); };
         mThenPromisePtr = thenPromise;
@@ -103,11 +108,11 @@ public:
     }
 
     template<typename ThenPromiseType>
-    EPromise<PromiseType, ThenPromiseType> &then(
+    EPromise<ThenPromiseType, PromiseType> &then(
             EObject *eObjectPtr,
             const std::function<ThenPromiseType(PromiseType)>& functor)
     {
-        auto thenPromise = new EPromise<PromiseType, ThenPromiseType>(eObjectPtr, functor);
+        auto thenPromise = new EPromise<ThenPromiseType, PromiseType>(eObjectPtr, functor);
         mExecuteThenFunctor = [=](PromiseType output)
         { thenPromise->execute(output); };
         mThenPromisePtr = thenPromise;

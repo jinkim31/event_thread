@@ -18,8 +18,8 @@ ethr::EObject::EObject(EThread* ethreadPtr)
     if(foundThread == EThread::eThreads.end())
         return;
     // assign found ethread
-    mParentThread = foundThread->second;
-    mParentThread->addChildEObject(this);
+    //mParentThread = foundThread->second;
+    //mParentThread->addChildEObject(this);
 }
 
 void ethr::EObject::moveToThread(ethr::EThread& ethread)
@@ -39,8 +39,11 @@ ethr::EObject::~EObject()
 void ethr::EObject::notifyEThreadDestruction(ethr::EThread *eThreadPtr)
 {
     if(mParentThread != eThreadPtr)
+    {
         std::cerr << "[EThread] EObject::notifyEThreadDestruction(ethr::EThread *eThreadPtr) "
-                     "is called with a wrong EThread pointer."<<std::endl;
+                     "is called with a wrong EThread pointer." << std::endl;
+        throw std::runtime_error("!!!!");
+    }
     mParentThread = nullptr;
 }
 

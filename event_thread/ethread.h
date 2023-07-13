@@ -131,14 +131,15 @@ public:
     explicit EObject(EThread *ethreadPtr = nullptr);
     virtual ~EObject();
 
-    template<typename ObjType, class... Args>
-    void callQueued(void (ObjType::*funcPtr)(Args...), Args... args)
+    template<typename RetType, typename ObjType, class... Args>
+    void callQueued(RetType (ObjType::*funcPtr)(Args...), Args... args)
     {
         if (mParentThread == nullptr)
         {
             std::cerr
                     << "[EThread] EObject::callQueued() is called but no EThread is assigned to it."
                     << std::endl;
+            throw std::runtime_error("[EThread] EObject::callQueued() is called but no EThread is assigned to it.");
             return;
         }
         mParentThread->queueNewEvent(this, std::bind(funcPtr, (ObjType *) this, args...));
@@ -151,6 +152,7 @@ public:
             std::cerr
                     << "[EThread] EObject::callQueued() is called but no EThread is assigned to it."
                     << std::endl;
+            throw std::runtime_error("[EThread] EObject::callQueued() is called but no EThread is assigned to it.");
             return;
         }
         eObjectPtr->mParentThread->queueNewEvent(eObjectPtr, functor);
