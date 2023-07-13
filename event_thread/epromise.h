@@ -38,8 +38,7 @@ public:
 
     ~EPromise()
     {
-        if (mThenPromisePtr)
-            delete mThenPromisePtr;
+
     }
 
     void selfDestructChain()

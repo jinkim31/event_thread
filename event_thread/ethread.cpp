@@ -18,8 +18,8 @@ ethr::EObject::EObject(EThread* ethreadPtr)
     if(foundThread == EThread::eThreads.end())
         return;
     // assign found ethread
-    //mParentThread = foundThread->second;
-    //mParentThread->addChildEObject(this);
+    mParentThread = foundThread->second;
+    mParentThread->addChildEObject(this);
 }
 
 void ethr::EObject::moveToThread(ethr::EThread& ethread)
