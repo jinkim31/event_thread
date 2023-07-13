@@ -24,7 +24,6 @@ class EPromise : public EDeletable
 public:
     EPromise(EObject *eObjectPtr, const std::function<PromiseType(ParamTypes...)> functor)
     {
-        std::cout<<"EPromise construct"<<std::endl;
         mTargetEObjectPtr = eObjectPtr;
         mExecuteFunctor = functor;
         mThenPromisePtr = nullptr;
@@ -57,8 +56,6 @@ public:
             {
                 if (mThenPromisePtr) mExecuteThenFunctor(mExecuteFunctor(params...));
                 else mExecuteFunctor(params...);
-                std::cout<<"EPromise destruct"<<std::endl;
-                delete this;
             }
             catch (const std::exception& e)
             {
@@ -72,6 +69,7 @@ public:
                     mCatchFunctor(eptr);
                 });
             }
+            delete this;
         });
     }
 

@@ -16,7 +16,9 @@ ethr::EObject::EObject(EThread* ethreadPtr)
     auto foundThread = EThread::eThreads.find(std::this_thread::get_id());
     // return if not found
     if(foundThread == EThread::eThreads.end())
+    {
         return;
+    }
     // assign found ethread
     mParentThread = foundThread->second;
     mParentThread->addChildEObject(this);
@@ -33,7 +35,9 @@ void ethr::EObject::moveToThread(ethr::EThread& ethread)
 ethr::EObject::~EObject()
 {
     if(mParentThread != nullptr)
+    {
         mParentThread->notifyEObjectDestruction(this);
+    }
 }
 
 void ethr::EObject::notifyEThreadDestruction(ethr::EThread *eThreadPtr)
@@ -218,13 +222,8 @@ void ethr::EThread::runLoop()
 void ethr::EThread::notifyEObjectDestruction(ethr::EObject *eObjectPtr)
 {
     std::unique_lock<std::mutex> eventLock(mMutexEvent);
-    for(auto iter = mEventQueue.begin(); iter != mEventQueue.end() ; iter++)
-    {
-        if(eObjectPtr == iter->first)
-        {
-            mEventQueue.erase(iter);
-        }
-    }
+    std::erase_if(mEventQueue, [&](std::pair<EObject *, std::function<void(void)>>& pair){return pair.first==eObjectPtr;});
+    std::erase_if(mChildEObjects, [&](EObject* ptr){return ptr==eObjectPtr;});
 }
 
 void ethr::EThread::addChildEObject(ethr::EObject *eObjectPtr)
