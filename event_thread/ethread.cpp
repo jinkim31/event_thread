@@ -75,6 +75,10 @@ ethr::EThread::~EThread()
      * stop() is here just for the context and it's not safe to terminate a ethread with it
      * since any virtual function overridden by the derived class is destructed prior to EThread itself.
      */
+    if(checkLoopRunningSafe())
+    {
+        std::cerr<<"EThread::stop() should be called before it EThread destruction."<<std::endl;
+    }
     stop();
 
     for(const auto& childEObject : mChildEObjects)
