@@ -35,11 +35,6 @@ public:
     EPromise(EObjectType *eObjectPtr, PromiseType(EObjectType::*funcPtr)(ParamTypes...))
     : EPromise(eObjectPtr, [=](ParamTypes... params){return ((*eObjectPtr).*funcPtr)(params...);}){}
 
-    ~EPromise()
-    {
-
-    }
-
     void selfDestructChain()
     {
         // TODO: destruct promises after exception catch
@@ -50,7 +45,7 @@ public:
         if (!mInitialized)
             return;
 
-        EObject::runQueued(mTargetEObjectId, [=]
+        EObject::runQueued(mTargetEObjectId, [&, params...]
         {
             try
             {
@@ -67,7 +62,7 @@ public:
                             + "\". Use EPromise::cat() to catch the exception.");
 
                 std::exception_ptr eptr = std::current_exception();
-                EObject::runQueued(mCatchEObjectId, [=]{
+                EObject::runQueued(mCatchEObjectId, [&]{
                     mCatchFunctor(eptr);
                 });
             }
@@ -87,7 +82,7 @@ public:
 
     EPromise<PromiseType, ParamTypes...>* cat(
             EObject *eObjectPtr,
-            const std::function<void(std::exception_ptr)> functor)
+            const std::function<void(std::exception_ptr)>& functor)
     {
         mCatchEObjectId = eObjectPtr->id();
         mCatchFunctor = functor;
@@ -100,8 +95,7 @@ public:
             ThenPromiseType(EObjectType::*funcPtr)(PromiseType))
     {
         auto thenPromise = new EPromise<ThenPromiseType, PromiseType>(eObjectPtr, funcPtr);
-        mExecuteThenFunctor = [=](PromiseType output)
-        { thenPromise->execute(output); };
+        mExecuteThenFunctor = [=](PromiseType output){ thenPromise->execute(output); };
         mThenPromisePtr = thenPromise;
         return thenPromise;
     }
@@ -112,8 +106,7 @@ public:
             const std::function<ThenPromiseType(PromiseType)>& functor)
     {
         auto thenPromise = new EPromise<ThenPromiseType, PromiseType>(eObjectPtr, functor);
-        mExecuteThenFunctor = [=](PromiseType output)
-        { thenPromise->execute(output); };
+        mExecuteThenFunctor = [=](PromiseType output){ thenPromise->execute(output); };
         mThenPromisePtr = thenPromise;
         return thenPromise;
     }

@@ -161,7 +161,6 @@ protected:
 private:
     int mId;
     EThread *mThreadInAffinity;
-    void notifyEThreadDestruction(EThread *eThreadPtr);
     static int idCount;
     static std::vector<std::pair<int, EObject*>> activeEObjectIds;
     static std::shared_mutex mutexActiveEObjectIds;
