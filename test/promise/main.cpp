@@ -47,7 +47,7 @@ public:
             ->then(&workers[7], &Worker::multiply)
             ->then(&workers[8], &Worker::multiply)
             ->then(&workers[9], &Worker::multiply);
-            promise->execute(1);
+            promise->execute(2);
         }, 1);
         timer.addTask(1, std::chrono::milliseconds(6000), []
         {
