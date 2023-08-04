@@ -7,19 +7,19 @@ using namespace ethr;
 class Worker : public EObject
 {
 public:
-    void setId(int id)
+    void setMultiplier(int multiplier)
     {
-        mId = id;
+        mMultiplier = multiplier;
     }
 
-    int getId(int n)
+    int multiply(int n)
     {
-        std::cout<<"n: "<<n<<", ID: "<<mId<<std::endl;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        return mId;
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::cout<<n<<"*"<<mMultiplier<<"="<<n*mMultiplier<<std::endl;
+        return n*mMultiplier;
     }
 private:
-    int mId;
+    int mMultiplier;
 };
 
 class App : public EObject
@@ -29,27 +29,27 @@ public:
     {
         for(int i=0; i<10; i++)
         {
-            workers[i].setId(i);
+            workers[i].setMultiplier(i+1);
             workers[i].addToThread(threads[i]);
             threads[i].start();
         }
         timer.addToThread(EThread::mainThread());
         timer.addTask(0, std::chrono::milliseconds(0), [&]
         {
-            auto promise = new EPromise(&workers[0], &Worker::getId);
+            auto promise = new EPromise(&workers[0], &Worker::multiply);
             promise
-                    ->then(&workers[1], &Worker::getId)
-                    ->then(&workers[2], &Worker::getId)
-                    ->then(&workers[3], &Worker::getId)
-                    ->then(&workers[4], &Worker::getId)
-                    ->then(&workers[5], &Worker::getId)
-                    ->then(&workers[6], &Worker::getId)
-                    ->then(&workers[7], &Worker::getId)
-                    ->then(&workers[8], &Worker::getId)
-                    ->then(&workers[9], &Worker::getId);
-            promise->execute(100);
+            ->then(&workers[1], &Worker::multiply)
+            ->then(&workers[2], &Worker::multiply)
+            ->then(&workers[3], &Worker::multiply)
+            ->then(&workers[4], &Worker::multiply)
+            ->then(&workers[5], &Worker::multiply)
+            ->then(&workers[6], &Worker::multiply)
+            ->then(&workers[7], &Worker::multiply)
+            ->then(&workers[8], &Worker::multiply)
+            ->then(&workers[9], &Worker::multiply);
+            promise->execute(1);
         }, 1);
-        timer.addTask(1, std::chrono::milliseconds(500), []
+        timer.addTask(1, std::chrono::milliseconds(6000), []
         {
             EThread::stopMainThread();
         }, 1);
