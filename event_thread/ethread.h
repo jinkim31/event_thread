@@ -31,13 +31,8 @@ public:
     public:
         MainEThreadNotAssignedException(const std::string& what) : std::runtime_error(what){}
     };
-    class MainEThreadAlreadyAssignedException : public std::runtime_error
-    {
-    public:
-        MainEThreadAlreadyAssignedException(const std::string& what) : std::runtime_error(what){}
-    };
 
-    explicit EThread(const std::string &name = "unnamed");
+    EThread(const std::string &name = "unnamed");
 
     ~EThread();
 
@@ -45,7 +40,7 @@ public:
      * @brief Start thread.
      *
      */
-    void start(bool isMain = false);
+    void start();
 
     /**
      * @brief Stop thread. This should be called before EThread destruction.
@@ -81,23 +76,26 @@ public:
 
     void handleQueuedEvents();
 
+    static void provideMainThread(EThread& ethread);
     static void stopMainThread();
 
 protected:
     virtual void task()
-    {};      // virtual function that runs in the loop
+    {};
 
     virtual void onStart()
-    {};   // virtual function that runs once when the thread starts
+    {};
 
     virtual void onTerminate()
     {};
+
+    EThread & mainThread();
 
 private:
     std::thread mThread;
     bool mIsMain;
     std::string mName;
-    std::mutex mMutexLoop, mMutexEvent;
+    std::mutex mMutexLoop, mMutexEvent, mMutexEObjects;
     std::deque<std::pair<EObject *, std::function<void(void)>>> mEventQueue;
     size_t mEventQueueSize;
     std::chrono::high_resolution_clock::duration mTaskPeriod;
@@ -105,7 +103,6 @@ private:
     bool mIsLoopRunning;
     EventHandleScheme mEventHandleScheme;
     std::vector<EObject *> mChildEObjects;
-    static std::map<std::thread::id, EThread *> eThreads;
     static EThread* mainEThreadPtr;
 
     bool checkLoopRunningSafe();
@@ -115,8 +112,6 @@ private:
     void runLoop();
 
     static void *threadEntryPoint(void *param);
-
-    void notifyEObjectDestruction(EObject *eObjectPtr);
 
     void addChildEObject(EObject *eObjectPtr);
 
@@ -128,41 +123,40 @@ private:
 class EObject
 {
 public:
-    explicit EObject(EThread *ethreadPtr = nullptr);
+    class EObjectDestructedInThreadException : public std::runtime_error
+    {
+    public:
+        EObjectDestructedInThreadException(const std::string& what) : std::runtime_error(what){}
+    };
+
+    EObject();
     virtual ~EObject();
 
     template<typename RetType, typename ObjType, class... Args>
     void callQueued(RetType (ObjType::*funcPtr)(Args...), Args... args)
     {
-        if (mParentThread == nullptr)
-        {
-            std::cerr
-                    << "[EThread] EObject::callQueued() is called but no EThread is assigned to it."
-                    << std::endl;
-            throw std::runtime_error("[EThread] EObject::callQueued() is called but no EThread is assigned to it.");
-            return;
-        }
-        mParentThread->queueNewEvent(this, std::bind(funcPtr, (ObjType *) this, args...));
+        if (mThreadInAffinity == nullptr)
+            throw std::runtime_error("EObject::callQueued() is called but no EThread is assigned to it.");
+        mThreadInAffinity->queueNewEvent(this, std::bind(funcPtr, (ObjType *) this, args...));
     }
 
     static void runQueued(EObject* eObjectPtr, const std::function<void(void)>& functor)
     {
-        if (eObjectPtr->mParentThread == nullptr)
-        {
-            std::cerr
-                    << "[EThread] EObject::callQueued() is called but no EThread is assigned to it."
-                    << std::endl;
-            throw std::runtime_error("[EThread] EObject::callQueued() is called but no EThread is assigned to it.");
-            return;
-        }
-        eObjectPtr->mParentThread->queueNewEvent(eObjectPtr, functor);
+        if (eObjectPtr->mThreadInAffinity == nullptr)
+            throw std::runtime_error("EObject::callQueued() is called but no EThread is assigned to it.");
+        eObjectPtr->mThreadInAffinity->queueNewEvent(eObjectPtr, functor);
     }
 
-    void moveToThread(EThread &ethread);
+    void addToThread(EThread &ethread);
+    void removeFromThread();
 
-    void notifyEThreadDestruction(EThread *eThreadPtr);
+protected:
+    EThread & threadInAffinity();
 private:
-    EThread *mParentThread;
+    EThread *mThreadInAffinity;
+    std::shared_mutex mMutex;
+    void notifyEThreadDestruction(EThread *eThreadPtr);
+friend EThread;
 };
 
 }

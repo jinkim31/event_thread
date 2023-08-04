@@ -1,88 +1,65 @@
 #include "ethread.h"
 
-std::map<std::thread::id, ethr::EThread*> ethr::EThread::eThreads;
 ethr::EThread* ethr::EThread::mainEThreadPtr = nullptr;
 
-ethr::EObject::EObject(EThread* ethreadPtr)
+ethr::EObject::EObject()
 {
-    mParentThread = ethreadPtr;
-    // return if ethread is explicitly assigned
-    if(ethreadPtr != nullptr)
-    {
-        mParentThread->addChildEObject(this);
-        return;
-    }
-    // find main ethread
-    auto foundThread = EThread::eThreads.find(std::this_thread::get_id());
-    // return if not found
-    if(foundThread == EThread::eThreads.end())
-    {
-        return;
-    }
-    // assign found ethread
-    mParentThread = foundThread->second;
-    mParentThread->addChildEObject(this);
+    mThreadInAffinity = nullptr;
 }
 
-void ethr::EObject::moveToThread(ethr::EThread& ethread)
+void ethr::EObject::addToThread(ethr::EThread& ethread)
 {
-    if(mParentThread != nullptr)
-        mParentThread->removeChildEObject(this);
-    ethread.addChildEObject(this);
-    mParentThread = &ethread;
+    std::shared_lock<std::shared_mutex> lock(mMutex);
+    if(mThreadInAffinity)
+        mThreadInAffinity->removeChildEObject(this);
+    mThreadInAffinity = &ethread;
+    mThreadInAffinity->addChildEObject(this);
+}
+
+void ethr::EObject::removeFromThread()
+{
+    std::shared_lock<std::shared_mutex> lock(mMutex);
+    if(!mThreadInAffinity)
+        return;
+    mThreadInAffinity->removeChildEObject(this);
+    mThreadInAffinity = nullptr;
 }
 
 ethr::EObject::~EObject()
 {
-    if(mParentThread != nullptr)
-    {
-        mParentThread->notifyEObjectDestruction(this);
-    }
+    std::shared_lock<std::shared_mutex> lock(mMutex);
+    if(mThreadInAffinity)
+        throw EObjectDestructedInThreadException(
+                "EObject(" + std::string(typeid(*this).name()) + ") must be removed from thread in affinity before destruction.");
 }
 
-void ethr::EObject::notifyEThreadDestruction(ethr::EThread *eThreadPtr)
+ethr::EThread & ethr::EObject::threadInAffinity()
 {
-    if(mParentThread != eThreadPtr)
-    {
-        std::cerr << "[EThread] EObject::notifyEThreadDestruction(ethr::EThread *eThreadPtr) "
-                     "is called with a wrong EThread pointer." << std::endl;
-        throw std::runtime_error("!!!!");
-    }
-    mParentThread = nullptr;
+    return *mThreadInAffinity;
 }
 
-ethr::EThread::EThread(const std::string& name)
+
+ethr::EThread::EThread(const std::string &name)
 {
+    mIsMain = false;
     mName = name;
     mEventQueueSize = 1000;
     mIsLoopRunning = false;
     mEventHandleScheme = EventHandleScheme::AFTER_TASK;
     mTaskPeriod = std::chrono::milliseconds(1);
-    eThreads.insert({std::this_thread::get_id(), this});
 }
 
 ethr::EThread::~EThread()
 {
-    /*
-     * stop() should be called explicitly before EThread destruction.
-     * otherwise crashes like following will occur:
-     *
-     * "
-     * pure virtual method called
-     * terminate called without an active exception
-     * "
-     *
-     * stop() is here just for the context and it's not safe to terminate a ethread with it
-     * since any virtual function overridden by the derived class is destructed prior to EThread itself.
-     */
     if(checkLoopRunningSafe())
     {
-        std::cerr<<"EThread::stop() should be called before it EThread destruction."<<std::endl;
+        std::cerr<<"[EThread] EThread::stop() must be called before it EThread destruction."<<std::endl;
     }
     stop();
 
-    for(const auto& childEObject : mChildEObjects)
-        childEObject->notifyEThreadDestruction(this);
+    if(!mChildEObjects.empty())
+        std::cerr<<"[EThread] EThread(" + mName + ") has child objects on destruction. "
+                                                  "Use EObject::removeFromThread() before its destruction."<<std::endl;
 }
 
 bool ethr::EThread::checkLoopRunningSafe()
@@ -114,25 +91,17 @@ void ethr::EThread::setEventHandleScheme(EventHandleScheme scheme)
     mEventHandleScheme = scheme;
 }
 
-void ethr::EThread::start(bool isMain)
+void ethr::EThread::start()
 {
     if(checkLoopRunningSafe())
         return;
-    if(isMain && mainEThreadPtr)
-        throw MainEThreadAlreadyAssignedException("You can only assign one EThread as main.");
 
-    mIsMain = isMain;
     mIsLoopRunning = true;
 
     if(!mIsMain)
-    {
         mThread = std::thread(EThread::threadEntryPoint, this);
-    }
     else
-    {
-        mainEThreadPtr = this;
         EThread::threadEntryPoint(this);
-    }
 }
 
 void ethr::EThread::stop()
@@ -223,21 +192,29 @@ void ethr::EThread::runLoop()
     onTerminate();
 }
 
-void ethr::EThread::notifyEObjectDestruction(ethr::EObject *eObjectPtr)
-{
-    std::unique_lock<std::mutex> eventLock(mMutexEvent);
-    std::erase_if(mEventQueue, [&](std::pair<EObject *, std::function<void(void)>>& pair){return pair.first==eObjectPtr;});
-    std::erase_if(mChildEObjects, [&](EObject* ptr){return ptr==eObjectPtr;});
-}
-
 void ethr::EThread::addChildEObject(ethr::EObject *eObjectPtr)
 {
+    //std::cout<<"adding "<<eObjectPtr<<" from thread "<<this<<std::endl;
+    std::unique_lock<std::mutex> lock(mMutexEObjects);
     mChildEObjects.push_back(eObjectPtr);
 }
 
 void ethr::EThread::removeChildEObject(EObject* eObjectPtr)
 {
-    mChildEObjects.erase(
-            std::remove(mChildEObjects.begin(), mChildEObjects.end(), eObjectPtr),
-            mChildEObjects.end());
+    //std::cout<<"removing "<<eObjectPtr<<" from thread "<<this<<std::endl;
+    std::unique_lock<std::mutex> lock(mMutexEObjects);
+    std::unique_lock<std::mutex> eventLock(mMutexEvent);
+    std::erase_if(mChildEObjects, [&](EObject* ptr){return ptr==eObjectPtr;});
+    std::erase_if(mEventQueue, [&](std::pair<EObject *, std::function<void(void)>>& pair){return pair.first==eObjectPtr;});
+}
+
+ethr::EThread & ethr::EThread::mainThread()
+{
+    return *EThread::mainEThreadPtr;
+}
+
+void ethr::EThread::provideMainThread(ethr::EThread &ethread)
+{
+    EThread::mainEThreadPtr = &ethread;
+    ethread.mIsMain = true;
 }

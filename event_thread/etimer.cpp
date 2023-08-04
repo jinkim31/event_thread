@@ -1,6 +1,6 @@
 #include "etimer.h"
 
-ethr::ELoopObserver::ELoopObserver()
+ethr::ELoopObserver::ELoopObserver() : EObject()
 {
     mIsObserving = false;
 }

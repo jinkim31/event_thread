@@ -9,8 +9,9 @@ add_library(event_thread STATIC
         event_thread/epromise.cpp
         event_thread/eutil.cpp
         )
-
-
 find_package(Threads REQUIRED)
 target_link_libraries(event_thread PRIVATE Threads::Threads)
 target_include_directories(event_thread PUBLIC ${PROJECT_SOURCE_DIR}/event_thread)
+
+add_executable(test_hello_ethread test/helloEThread/main.cpp)
+target_link_libraries(test_hello_ethread PRIVATE event_thread)
