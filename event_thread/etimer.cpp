@@ -55,11 +55,8 @@ void ethr::ETimer::stop()
     ELoopObserver::stop();
 }
 
-void ethr::ETimer::addTask(
-        const int &id,
-        const std::function<void(void)> &callback,
-        const std::chrono::high_resolution_clock::duration &period,
-        const int &timeToLive)
+void ethr::ETimer::addTask(const int &id, const std::chrono::high_resolution_clock::duration &period,
+                           const std::function<void(void)> &callback, const int &timeToLive)
 {
     mTasks.insert({
         id,

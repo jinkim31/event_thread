@@ -23,11 +23,8 @@ class ETimer : public ELoopObserver
 public:
     void start();
     void stop();
-    void addTask(
-            const int &id,
-            const std::function<void(void)> &callback,
-            const std::chrono::high_resolution_clock::duration &period,
-            const int &timeToLive = -1);
+    void addTask(const int &id, const std::chrono::high_resolution_clock::duration &period,
+                 const std::function<void(void)> &callback, const int &timeToLive = -1);
     bool removeTask(const int &id);
 private:
     struct Task

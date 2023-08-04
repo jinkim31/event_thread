@@ -13,5 +13,8 @@ find_package(Threads REQUIRED)
 target_link_libraries(event_thread PRIVATE Threads::Threads)
 target_include_directories(event_thread PUBLIC ${PROJECT_SOURCE_DIR}/event_thread)
 
-add_executable(test_hello_ethread test/helloEThread/main.cpp)
+add_executable(test_hello_ethread test/hello_ethread/main.cpp)
 target_link_libraries(test_hello_ethread PRIVATE event_thread)
+
+add_executable(test_promise test/promise/main.cpp)
+target_link_libraries(test_promise PRIVATE event_thread)

@@ -78,6 +78,7 @@ public:
 
     static void provideMainThread(EThread& ethread);
     static void stopMainThread();
+    static EThread & mainThread();
 
 protected:
     virtual void task()
@@ -89,25 +90,23 @@ protected:
     virtual void onTerminate()
     {};
 
-    EThread & mainThread();
-
 private:
     std::thread mThread;
     bool mIsMain;
     std::string mName;
     std::mutex mMutexLoop, mMutexEventQueue, mMutexEventHandling, mMutexChildObjects;
-    std::deque<std::pair<EObject *, std::function<void(void)>>> mEventQueue;
+    std::deque<std::pair<int, std::function<void(void)>>> mEventQueue;
     size_t mEventQueueSize;
     std::chrono::high_resolution_clock::duration mTaskPeriod;
     std::chrono::time_point<std::chrono::high_resolution_clock> mNextTaskTime;
     bool mIsLoopRunning;
     EventHandleScheme mEventHandleScheme;
-    std::vector<EObject *> mChildEObjects;
+    std::vector<int> mChildEObjectsIds;
     static EThread* mainEThreadPtr;
 
     bool checkLoopRunningSafe();
 
-    void queueNewEvent(EObject *eObjectPtr, const std::function<void()> &func);
+    void queueNewEvent(int eObjectId, const std::function<void()> &func);
 
     void runLoop();
 
@@ -137,25 +136,35 @@ public:
     {
         if (mThreadInAffinity == nullptr)
             throw std::runtime_error("EObject::callQueued() is called but no EThread is assigned to it.");
-        mThreadInAffinity->queueNewEvent(this, std::bind(funcPtr, (ObjType *) this, args...));
+        mThreadInAffinity->queueNewEvent(mId, std::bind(funcPtr, (ObjType *) this, args...));
     }
 
-    static void runQueued(EObject* eObjectPtr, const std::function<void(void)>& functor)
+    static void runQueued(int eObjectId, const std::function<void(void)>& functor)
     {
-        if (eObjectPtr->mThreadInAffinity == nullptr)
-            throw std::runtime_error("EObject::callQueued() is called but no EThread is assigned to it.");
-        eObjectPtr->mThreadInAffinity->queueNewEvent(eObjectPtr, functor);
+        std::shared_lock<std::shared_mutex> lock(EObject::mutexActiveEObjectIds);
+        auto it =std::find_if(
+                EObject::activeEObjectIds.begin(),
+                EObject::activeEObjectIds.end(),
+                [&](std::pair<int, EObject*> pair){return pair.first == eObjectId;});
+        if(it == EObject::activeEObjectIds.end())
+            return;
+
+        it->second->mThreadInAffinity->queueNewEvent(eObjectId, functor);
     }
 
     void addToThread(EThread &ethread);
     void removeFromThread();
+    int id();
 
 protected:
     EThread & threadInAffinity();
 private:
+    int mId;
     EThread *mThreadInAffinity;
-    std::shared_mutex mMutex;
     void notifyEThreadDestruction(EThread *eThreadPtr);
+    static int idCount;
+    static std::vector<std::pair<int, EObject*>> activeEObjectIds;
+    static std::shared_mutex mutexActiveEObjectIds;
 friend EThread;
 };
 

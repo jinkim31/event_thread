@@ -37,12 +37,14 @@ public:
     App()
     {
         timer.addToThread(controllerThread);
-        timer.addTask(1, [&]{
+        timer.addTask(1, std::chrono::milliseconds(100), [&]
+        {
             controller.callQueued(&Controller::addWorker);
-            }, std::chrono::milliseconds(100), 3);
-        timer.addTask(0, [&]{
+        }, 3);
+        timer.addTask(0, std::chrono::milliseconds(400), [&]
+        {
             EThread::stopMainThread();
-            }, std::chrono::milliseconds(400), 1);
+        }, 1);
         timer.start();
 
         controller.addToThread(controllerThread);

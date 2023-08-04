@@ -1,15 +1,18 @@
 #include "ethread.h"
 
 ethr::EThread* ethr::EThread::mainEThreadPtr = nullptr;
+int ethr::EObject::idCount = 0;
+std::vector<std::pair<int, ethr::EObject*>> ethr::EObject::activeEObjectIds;
+std::shared_mutex ethr::EObject::mutexActiveEObjectIds;
 
 ethr::EObject::EObject()
 {
+    mId = EObject::idCount++;
     mThreadInAffinity = nullptr;
 }
 
 void ethr::EObject::addToThread(ethr::EThread& ethread)
 {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
     if(mThreadInAffinity)
         mThreadInAffinity->removeChildEObject(this);
     mThreadInAffinity = &ethread;
@@ -18,7 +21,6 @@ void ethr::EObject::addToThread(ethr::EThread& ethread)
 
 void ethr::EObject::removeFromThread()
 {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
     if(!mThreadInAffinity)
         return;
     mThreadInAffinity->removeChildEObject(this);
@@ -27,7 +29,6 @@ void ethr::EObject::removeFromThread()
 
 ethr::EObject::~EObject()
 {
-    std::shared_lock<std::shared_mutex> lock(mMutex);
     if(mThreadInAffinity)
         throw EObjectDestructedInThreadException(
                 "EObject(" + std::string(typeid(*this).name()) + ") must be removed from thread in affinity before destruction.");
@@ -38,6 +39,10 @@ ethr::EThread & ethr::EObject::threadInAffinity()
     return *mThreadInAffinity;
 }
 
+int ethr::EObject::id()
+{
+    return mId;
+}
 
 ethr::EThread::EThread(const std::string &name)
 {
@@ -57,7 +62,7 @@ ethr::EThread::~EThread()
     }
     stop();
 
-    if(!mChildEObjects.empty())
+    if(!mChildEObjectsIds.empty())
         std::cerr<<"[EThread] EThread(" + mName + ") has child objects on destruction. "
                                                   "Use EObject::removeFromThread() before its destruction."<<std::endl;
 }
@@ -118,13 +123,12 @@ void ethr::EThread::stop()
     }
 }
 
-void ethr::EThread::queueNewEvent(EObject *eObjectPtr, const std::function<void()> &func)
+void ethr::EThread::queueNewEvent(int eObjectId, const std::function<void()> &func)
 {
-    std::cout<<"adding event for "<<eObjectPtr<<std::endl;
     std::unique_lock<std::mutex> lock(mMutexEventQueue);
-    if(std::find(mChildEObjects.begin(), mChildEObjects.end(), eObjectPtr) == mChildEObjects.end())
+    if(std::find(mChildEObjectsIds.begin(), mChildEObjectsIds.end(), eObjectId) == mChildEObjectsIds.end())
         return;
-    if(mEventQueue.size() < mEventQueueSize) mEventQueue.emplace_back(eObjectPtr, func);
+    if(mEventQueue.size() < mEventQueueSize) mEventQueue.emplace_back(eObjectId, func);
 }
 
 void *ethr::EThread::threadEntryPoint(void *param)
@@ -137,16 +141,18 @@ void *ethr::EThread::threadEntryPoint(void *param)
 
 void ethr::EThread::handleQueuedEvents()
 {
+    // lock mMutexEventHandling to prohibit event deletion when chile EObject::removeFromThread()
     std::unique_lock<std::mutex> executionLock(mMutexEventHandling);
 
     size_t nQueuedEvent = mEventQueue.size();
     for(int i=0; i<nQueuedEvent; i++)
     {
-        // lock mutex and copy function at the front
+        // lock mMutexEventQueue to access event queue
         std::unique_lock<std::mutex> eventLock(mMutexEventQueue);
         auto func = mEventQueue.front().second;
-        std::cout<<"executing event for EObject "<<mEventQueue.front().first<<std::endl;
         mEventQueue.pop_front();
+
+        // unlocking mMutexEventQueue allows event push between event executions
         eventLock.unlock();
 
        // execute function
@@ -200,24 +206,23 @@ void ethr::EThread::runLoop()
 
 void ethr::EThread::addChildEObject(ethr::EObject *eObjectPtr)
 {
-    //std::cout<<"adding "<<eObjectPtr<<" from thread "<<this<<std::endl;
     std::unique_lock<std::mutex> lock(mMutexChildObjects);
-    mChildEObjects.push_back(eObjectPtr);
+    std::unique_lock<std::shared_mutex> activeEObjectsLock(EObject::mutexActiveEObjectIds);
+
+    mChildEObjectsIds.push_back(eObjectPtr->mId);
+    EObject::activeEObjectIds.emplace_back(eObjectPtr->mId, eObjectPtr);
 }
 
 void ethr::EThread::removeChildEObject(EObject* eObjectPtr)
 {
-    //std::cout<<"removing "<<eObjectPtr<<" from thread "<<this<<std::endl;
-    std::unique_lock<std::mutex> lock(mMutexChildObjects);
+    std::unique_lock<std::mutex> childObjectsLock(mMutexChildObjects);
     std::unique_lock<std::mutex> executionLock(mMutexEventHandling);
     std::unique_lock<std::mutex> eventLock(mMutexEventQueue);
+    std::unique_lock<std::shared_mutex> activeEObjectsLock(EObject::mutexActiveEObjectIds);
 
-    std::erase_if(mChildEObjects, [&](EObject* ptr){return ptr==eObjectPtr;});
-    std::erase_if(mEventQueue, [&](std::pair<EObject *, std::function<void(void)>>& pair){
-        if(pair.first==eObjectPtr)
-            std::cout<<"removing event for EObject "<<pair.first<<std::endl;
-        return pair.first==eObjectPtr;
-    });
+    std::erase_if(mChildEObjectsIds, [&](int id){return id == eObjectPtr->mId;});
+    std::erase_if(mEventQueue, [&](std::pair<int, std::function<void(void)>>& pair){return pair.first==eObjectPtr->mId;});
+    std::erase_if(EObject::activeEObjectIds,[&](std::pair<int, EObject*> pair){return pair.first == eObjectPtr->mId;});
 }
 
 ethr::EThread & ethr::EThread::mainThread()
