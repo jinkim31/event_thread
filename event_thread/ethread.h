@@ -95,7 +95,7 @@ private:
     std::thread mThread;
     bool mIsMain;
     std::string mName;
-    std::mutex mMutexLoop, mMutexEvent, mMutexEObjects;
+    std::mutex mMutexLoop, mMutexEventQueue, mMutexEventHandling, mMutexChildObjects;
     std::deque<std::pair<EObject *, std::function<void(void)>>> mEventQueue;
     size_t mEventQueueSize;
     std::chrono::high_resolution_clock::duration mTaskPeriod;

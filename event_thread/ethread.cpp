@@ -120,7 +120,10 @@ void ethr::EThread::stop()
 
 void ethr::EThread::queueNewEvent(EObject *eObjectPtr, const std::function<void()> &func)
 {
-    std::unique_lock<std::mutex> lock(mMutexEvent);
+    std::cout<<"adding event for "<<eObjectPtr<<std::endl;
+    std::unique_lock<std::mutex> lock(mMutexEventQueue);
+    if(std::find(mChildEObjects.begin(), mChildEObjects.end(), eObjectPtr) == mChildEObjects.end())
+        return;
     if(mEventQueue.size() < mEventQueueSize) mEventQueue.emplace_back(eObjectPtr, func);
 }
 
@@ -134,12 +137,15 @@ void *ethr::EThread::threadEntryPoint(void *param)
 
 void ethr::EThread::handleQueuedEvents()
 {
+    std::unique_lock<std::mutex> executionLock(mMutexEventHandling);
+
     size_t nQueuedEvent = mEventQueue.size();
     for(int i=0; i<nQueuedEvent; i++)
     {
         // lock mutex and copy function at the front
-        std::unique_lock<std::mutex> eventLock(mMutexEvent);
+        std::unique_lock<std::mutex> eventLock(mMutexEventQueue);
         auto func = mEventQueue.front().second;
+        std::cout<<"executing event for EObject "<<mEventQueue.front().first<<std::endl;
         mEventQueue.pop_front();
         eventLock.unlock();
 
@@ -195,17 +201,23 @@ void ethr::EThread::runLoop()
 void ethr::EThread::addChildEObject(ethr::EObject *eObjectPtr)
 {
     //std::cout<<"adding "<<eObjectPtr<<" from thread "<<this<<std::endl;
-    std::unique_lock<std::mutex> lock(mMutexEObjects);
+    std::unique_lock<std::mutex> lock(mMutexChildObjects);
     mChildEObjects.push_back(eObjectPtr);
 }
 
 void ethr::EThread::removeChildEObject(EObject* eObjectPtr)
 {
     //std::cout<<"removing "<<eObjectPtr<<" from thread "<<this<<std::endl;
-    std::unique_lock<std::mutex> lock(mMutexEObjects);
-    std::unique_lock<std::mutex> eventLock(mMutexEvent);
+    std::unique_lock<std::mutex> lock(mMutexChildObjects);
+    std::unique_lock<std::mutex> executionLock(mMutexEventHandling);
+    std::unique_lock<std::mutex> eventLock(mMutexEventQueue);
+
     std::erase_if(mChildEObjects, [&](EObject* ptr){return ptr==eObjectPtr;});
-    std::erase_if(mEventQueue, [&](std::pair<EObject *, std::function<void(void)>>& pair){return pair.first==eObjectPtr;});
+    std::erase_if(mEventQueue, [&](std::pair<EObject *, std::function<void(void)>>& pair){
+        if(pair.first==eObjectPtr)
+            std::cout<<"removing event for EObject "<<pair.first<<std::endl;
+        return pair.first==eObjectPtr;
+    });
 }
 
 ethr::EThread & ethr::EThread::mainThread()
