@@ -2,7 +2,7 @@
 
 ethr::EThread* ethr::EThread::mainEThreadPtr = nullptr;
 int ethr::EObject::idCount = 0;
-std::vector<std::pair<int, ethr::EObject*>> ethr::EObject::activeEObjectIds;
+std::map<int, ethr::EObject*> ethr::EObject::activeEObjectIds;
 std::shared_mutex ethr::EObject::mutexActiveEObjectIds;
 
 ethr::EObject::EObject()
@@ -11,7 +11,7 @@ ethr::EObject::EObject()
     mThreadInAffinity = nullptr;
 }
 
-void ethr::EObject::addToThread(ethr::EThread& ethread)
+void ethr::EObject::moveToThread(ethr::EThread& ethread)
 {
     if(mThreadInAffinity)
         mThreadInAffinity->removeChildEObject(this);
@@ -30,18 +30,12 @@ void ethr::EObject::removeFromThread()
 ethr::EObject::~EObject()
 {
     if(mThreadInAffinity)
-        throw EObjectDestructedInThreadException(
-                "EObject(" + std::string(typeid(*this).name()) + ") must be removed from thread in affinity before destruction.");
+        std::cerr<<"[EThread] EObject must be removed from thread in affinity before destruction."<<std::endl;
 }
 
 ethr::EThread & ethr::EObject::threadInAffinity()
 {
     return *mThreadInAffinity;
-}
-
-int ethr::EObject::id()
-{
-    return mId;
 }
 
 ethr::EThread::EThread(const std::string &name)
@@ -51,7 +45,7 @@ ethr::EThread::EThread(const std::string &name)
     mEventQueueSize = 1000;
     mIsLoopRunning = false;
     mEventHandleScheme = EventHandleScheme::AFTER_TASK;
-    mTaskPeriod = std::chrono::milliseconds(1);
+    mLoopPeriod = std::chrono::milliseconds(1);
 }
 
 ethr::EThread::~EThread()
@@ -81,13 +75,13 @@ void ethr::EThread::setName(const std::string& name)
 void ethr::EThread::setLoopPeriod(std::chrono::duration<long long int, std::nano> period)
 {
     if(checkLoopRunningSafe()) return;
-    mTaskPeriod = period;
+    mLoopPeriod = period;
 }
 
 void ethr::EThread::setLoopFreq(const unsigned int& freq)
 {
     if(checkLoopRunningSafe()) return;
-    mTaskPeriod = std::chrono::seconds(1) / freq;
+    mLoopPeriod = std::chrono::seconds(1) / freq;
 }
 
 void ethr::EThread::setEventHandleScheme(EventHandleScheme scheme)
@@ -134,7 +128,7 @@ void ethr::EThread::queueNewEvent(int eObjectId, const std::function<void()> &fu
 void *ethr::EThread::threadEntryPoint(void *param)
 {
     auto* ethreadPtr = (EThread*)param;
-    ethreadPtr->mNextTaskTime = std::chrono::high_resolution_clock::now() + ethreadPtr->mTaskPeriod;
+    ethreadPtr->mNextTaskTime = std::chrono::high_resolution_clock::now() + ethreadPtr->mLoopPeriod;
     ethreadPtr->runLoop();
     return nullptr;
 }
@@ -177,7 +171,7 @@ void ethr::EThread::runLoop()
     while(checkLoopRunningSafe())
     {
         std::this_thread::sleep_for(mNextTaskTime - std::chrono::high_resolution_clock::now());
-        mNextTaskTime += mTaskPeriod;
+        mNextTaskTime += mLoopPeriod;
 
         switch(mEventHandleScheme)
         {
@@ -210,7 +204,7 @@ void ethr::EThread::addChildEObject(ethr::EObject *eObjectPtr)
     std::unique_lock<std::shared_mutex> activeEObjectsLock(EObject::mutexActiveEObjectIds);
 
     mChildEObjectsIds.push_back(eObjectPtr->mId);
-    EObject::activeEObjectIds.emplace_back(eObjectPtr->mId, eObjectPtr);
+    EObject::activeEObjectIds.insert({eObjectPtr->mId, eObjectPtr});
 }
 
 void ethr::EThread::removeChildEObject(EObject* eObjectPtr)
@@ -222,7 +216,7 @@ void ethr::EThread::removeChildEObject(EObject* eObjectPtr)
 
     std::erase_if(mChildEObjectsIds, [&](int id){return id == eObjectPtr->mId;});
     std::erase_if(mEventQueue, [&](std::pair<int, std::function<void(void)>>& pair){return pair.first==eObjectPtr->mId;});
-    std::erase_if(EObject::activeEObjectIds,[&](std::pair<int, EObject*> pair){return pair.first == eObjectPtr->mId;});
+    EObject::activeEObjectIds.erase(eObjectPtr->mId);
 }
 
 ethr::EThread & ethr::EThread::mainThread()

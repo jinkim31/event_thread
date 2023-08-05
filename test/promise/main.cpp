@@ -30,23 +30,23 @@ public:
         for(int i=0; i<10; i++)
         {
             workers[i].setMultiplier(i+1);
-            workers[i].addToThread(threads[i]);
+            workers[i].moveToThread(threads[i]);
             threads[i].start();
         }
-        timer.addToThread(EThread::mainThread());
+        timer.moveToThread(EThread::mainThread());
         timer.addTask(0, std::chrono::milliseconds(0), [&]
         {
-            auto promise = new EPromise(&workers[0], &Worker::multiply);
+            auto promise = new EPromise(workers[0].ref<Worker>(), &Worker::multiply);
             promise
-            ->then(&workers[1], &Worker::multiply)
-            ->then(&workers[2], &Worker::multiply)
-            ->then(&workers[3], &Worker::multiply)
-            ->then(&workers[4], &Worker::multiply)
-            ->then(&workers[5], &Worker::multiply)
-            ->then(&workers[6], &Worker::multiply)
-            ->then(&workers[7], &Worker::multiply)
-            ->then(&workers[8], &Worker::multiply)
-            ->then(&workers[9], &Worker::multiply);
+            ->then(workers[1].ref<Worker>(), &Worker::multiply)
+            ->then(workers[2].ref<Worker>(), &Worker::multiply)
+            ->then(workers[3].ref<Worker>(), &Worker::multiply)
+            ->then(workers[4].ref<Worker>(), &Worker::multiply)
+            ->then(workers[5].ref<Worker>(), &Worker::multiply)
+            ->then(workers[6].ref<Worker>(), &Worker::multiply)
+            ->then(workers[7].ref<Worker>(), &Worker::multiply)
+            ->then(workers[8].ref<Worker>(), &Worker::multiply)
+            ->then(workers[9].ref<Worker>(), &Worker::multiply);
             promise->execute(2);
         }, 1);
         timer.addTask(1, std::chrono::milliseconds(6000), []
@@ -54,7 +54,6 @@ public:
             EThread::stopMainThread();
         }, 1);
         timer.start();
-
     }
     ~App()
     {
@@ -75,7 +74,7 @@ int main()
     EThread mainThread("main");
     EThread::provideMainThread(mainThread);
     App app;
-    app.addToThread(mainThread);
+    app.moveToThread(mainThread);
     mainThread.start();
     app.removeFromThread();
 }

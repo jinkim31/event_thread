@@ -14,7 +14,13 @@
 
 namespace ethr
 {
+// forward decl
 class EObject;
+template <class>
+class EObjectRef;
+class UntypedEObjectRef;
+template<typename PromiseType, typename... ParamTypes>
+class EPromise;
 
 class EThread
 {
@@ -29,10 +35,10 @@ public:
     class MainEThreadNotAssignedException : public std::runtime_error
     {
     public:
-        MainEThreadNotAssignedException(const std::string& what) : std::runtime_error(what){}
+        explicit MainEThreadNotAssignedException(const std::string& what) : std::runtime_error(what){}
     };
 
-    EThread(const std::string &name = "unnamed");
+    explicit EThread(const std::string &name = "unnamed");
 
     ~EThread();
 
@@ -97,7 +103,7 @@ private:
     std::mutex mMutexLoop, mMutexEventQueue, mMutexEventHandling, mMutexChildObjects;
     std::deque<std::pair<int, std::function<void(void)>>> mEventQueue;
     size_t mEventQueueSize;
-    std::chrono::high_resolution_clock::duration mTaskPeriod;
+    std::chrono::high_resolution_clock::duration mLoopPeriod;
     std::chrono::time_point<std::chrono::high_resolution_clock> mNextTaskTime;
     bool mIsLoopRunning;
     EventHandleScheme mEventHandleScheme;
@@ -117,6 +123,7 @@ private:
     void removeChildEObject(EObject *eObjectPtr);
 
     friend EObject;
+    template <class> friend class EObjectRef;
 };
 
 class EObject
@@ -125,10 +132,11 @@ public:
     class EObjectDestructedInThreadException : public std::runtime_error
     {
     public:
-        EObjectDestructedInThreadException(const std::string& what) : std::runtime_error(what){}
+        explicit EObjectDestructedInThreadException(const std::string& what) : std::runtime_error(what){}
     };
 
     EObject();
+
     virtual ~EObject();
 
     template<typename RetType, typename ObjType, class... Args>
@@ -139,32 +147,88 @@ public:
         mThreadInAffinity->queueNewEvent(mId, std::bind(funcPtr, (ObjType *) this, args...));
     }
 
-    static void runQueued(int eObjectId, const std::function<void(void)>& functor)
+    void runQueued(const std::function<void(void)>& functor)
     {
-        std::shared_lock<std::shared_mutex> lock(EObject::mutexActiveEObjectIds);
-        auto it =std::find_if(
-                EObject::activeEObjectIds.begin(),
-                EObject::activeEObjectIds.end(),
-                [&](std::pair<int, EObject*> pair){return pair.first == eObjectId;});
-        if(it == EObject::activeEObjectIds.end())
-            return;
-
-        it->second->mThreadInAffinity->queueNewEvent(eObjectId, functor);
+        mThreadInAffinity->queueNewEvent(mId, functor);
     }
 
-    void addToThread(EThread &ethread);
-    void removeFromThread();
-    int id();
+    void moveToThread(EThread &ethread);
 
+    void removeFromThread();
+
+    template <class T>
+    EObjectRef<T> ref()
+    {
+        return EObjectRef<T>(mId, dynamic_cast<T*>(this));
+    }
 protected:
     EThread & threadInAffinity();
 private:
     int mId;
     EThread *mThreadInAffinity;
     static int idCount;
-    static std::vector<std::pair<int, EObject*>> activeEObjectIds;
+    static std::map<int, EObject*> activeEObjectIds;
     static std::shared_mutex mutexActiveEObjectIds;
 friend EThread;
+friend UntypedEObjectRef;
+template <class> friend class EObjectRef;
+};
+
+class UntypedEObjectRef
+{
+public:
+    UntypedEObjectRef()
+    {
+        mInitialized = false;
+    }
+    bool isInitialized() const
+    {
+        return mInitialized;
+    }
+    bool runQueued(const std::function<void(void)>& functor) const
+    {
+        std::shared_lock<std::shared_mutex> lock(EObject::mutexActiveEObjectIds);
+        auto eObjectPtrIter = EObject::activeEObjectIds.find(mEObjectId);
+        if (eObjectPtrIter == EObject::activeEObjectIds.end())
+            return false;
+        eObjectPtrIter->second->runQueued(functor);
+        return true;
+    }
+protected:
+    int mEObjectId;
+    EObject* mUntypedEObjectUnsafePtr;
+    bool mInitialized;
+};
+
+template <class EObjectType>
+class EObjectRef : public UntypedEObjectRef
+{
+public:
+    EObjectRef()=default;
+    template<typename RetType, class... Args>
+    bool callQueued(RetType (EObjectType::*funcPtr)(Args...), Args... args)
+    {
+        std::shared_lock<std::shared_mutex> lock(EObject::mutexActiveEObjectIds);
+        auto eObjectPtrIter = EObject::activeEObjectIds.find(mEObjectId);
+        if (eObjectPtrIter == EObject::activeEObjectIds.end())
+            return false;
+        eObjectPtrIter->second->callQueued(funcPtr, args...);
+        return true;
+    }
+
+private:
+    // private constructor so user can't create ref.
+    EObjectRef(int eObjectId, EObjectType* eObjectPtr)
+    {
+        mEObjectId = eObjectId;
+        mUntypedEObjectUnsafePtr = eObjectPtr;
+        mEObjectUnsafePtr = (EObjectType*)eObjectPtr;
+        mInitialized = true;
+    }
+
+    EObjectType* mEObjectUnsafePtr;
+    friend EObject;
+    template<typename, typename...> friend class EPromise;
 };
 
 }

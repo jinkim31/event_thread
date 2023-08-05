@@ -9,7 +9,7 @@ namespace ethr
 class ExceptionNotCaughtException : public std::runtime_error
 {
 public:
-    ExceptionNotCaughtException(const std::string& what) : std::runtime_error(what){}
+    explicit ExceptionNotCaughtException(const std::string& what) : std::runtime_error(what){}
 };
 
 class EDeletable
@@ -22,18 +22,17 @@ template<typename PromiseType, typename... ParamTypes>
 class EPromise : public EDeletable
 {
 public:
-    EPromise(EObject *eObjectPtr, const std::function<PromiseType(ParamTypes...)> functor)
+    EPromise(UntypedEObjectRef eObjectRef, const std::function<PromiseType(ParamTypes...)> functor)
     {
-        mTargetEObjectId = eObjectPtr->id();
+        mTargetEObjectRef = eObjectRef;
         mExecuteFunctor = functor;
         mThenPromisePtr = nullptr;
-        mCatchEObjectId = -1;
         mInitialized = true;
     }
 
     template<typename EObjectType>
-    EPromise(EObjectType *eObjectPtr, PromiseType(EObjectType::*funcPtr)(ParamTypes...))
-    : EPromise(eObjectPtr, [=](ParamTypes... params){return ((*eObjectPtr).*funcPtr)(params...);}){}
+    EPromise(EObjectRef<EObjectType> eObjectRef, PromiseType(EObjectType::*funcPtr)(ParamTypes...))
+    : EPromise(eObjectRef, [=](ParamTypes... params){return ((*(eObjectRef.mEObjectUnsafePtr)).*funcPtr)(params...);}){}
 
     void selfDestructChain()
     {
@@ -45,7 +44,7 @@ public:
         if (!mInitialized)
             return;
 
-        EObject::runQueued(mTargetEObjectId, [&, params...]
+        mTargetEObjectRef.runQueued([&, params...]
         {
             try
             {
@@ -56,13 +55,13 @@ public:
             }
             catch (const std::exception& e)
             {
-                if (mCatchEObjectId == -1)
+                if (!mCatchEObjectRef.isInitialized())
                     throw ExceptionNotCaughtException(
                             "[EThread] Detected uncaught exception: \"" + std::string(e.what())
                             + "\". Use EPromise::cat() to catch the exception.");
 
                 std::exception_ptr eptr = std::current_exception();
-                EObject::runQueued(mCatchEObjectId, [&]{
+                mCatchEObjectRef.runQueued([&]{
                     mCatchFunctor(eptr);
                 });
             }
@@ -72,29 +71,29 @@ public:
 
     template<typename EObjectType>
     EPromise<PromiseType, ParamTypes...>* cat(
-            EObjectType *eObjectPtr,
+            EObjectRef<EObjectType> eObjectRef,
             void(EObjectType::*funcPtr)(std::exception_ptr))
     {
-        mCatchEObjectId = eObjectPtr;
-        mCatchFunctor = std::bind(funcPtr, eObjectPtr, std::placeholders::_1);
+        mCatchEObjectRef = eObjectRef;
+        mCatchFunctor = std::bind(funcPtr, eObjectRef.mUntypedEObjectUnsafePtr, std::placeholders::_1);
         return this;
     }
 
     EPromise<PromiseType, ParamTypes...>* cat(
-            EObject *eObjectPtr,
+            UntypedEObjectRef eObjectRef,
             const std::function<void(std::exception_ptr)>& functor)
     {
-        mCatchEObjectId = eObjectPtr->id();
+        mCatchEObjectRef = eObjectRef;
         mCatchFunctor = functor;
         return this;
     }
 
     template<typename ThenPromiseType, typename EObjectType>
     EPromise<ThenPromiseType, PromiseType>* then(
-            EObjectType *eObjectPtr,
+            EObjectRef<EObjectType> eObjectRef,
             ThenPromiseType(EObjectType::*funcPtr)(PromiseType))
     {
-        auto thenPromise = new EPromise<ThenPromiseType, PromiseType>(eObjectPtr, funcPtr);
+        auto thenPromise = new EPromise<ThenPromiseType, PromiseType>(eObjectRef, funcPtr);
         mExecuteThenFunctor = [=](PromiseType output){ thenPromise->execute(output); };
         mThenPromisePtr = thenPromise;
         return thenPromise;
@@ -102,10 +101,10 @@ public:
 
     template<typename ThenPromiseType>
     EPromise<ThenPromiseType, PromiseType>* then(
-            EObject *eObjectPtr,
+            UntypedEObjectRef eObjectRef,
             const std::function<ThenPromiseType(PromiseType)>& functor)
     {
-        auto thenPromise = new EPromise<ThenPromiseType, PromiseType>(eObjectPtr, functor);
+        auto thenPromise = new EPromise<ThenPromiseType, PromiseType>(eObjectRef, functor);
         mExecuteThenFunctor = [=](PromiseType output){ thenPromise->execute(output); };
         mThenPromisePtr = thenPromise;
         return thenPromise;
@@ -113,10 +112,10 @@ public:
 
 private:
     bool mInitialized;
-    int mTargetEObjectId;
+    UntypedEObjectRef mTargetEObjectRef;
     std::function<void(PromiseType)> mExecuteThenFunctor;
     std::function<PromiseType(ParamTypes...)> mExecuteFunctor;
-    int mCatchEObjectId;
+    UntypedEObjectRef mCatchEObjectRef;
     std::function<void(std::exception_ptr)> mCatchFunctor;
     EDeletable *mThenPromisePtr;
 };
