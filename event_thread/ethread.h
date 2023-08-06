@@ -156,9 +156,15 @@ public:
 
     void removeFromThread();
 
+    UntypedEObjectRef uref();
+
     template <class T>
     EObjectRef<T> ref()
     {
+        T *eObjectPtr = dynamic_cast<T*>(this);
+        if(eObjectPtr == nullptr)
+            throw std::runtime_error(
+                    ("[EThread] In EObject::ref(). Cannot create EObjectRef of type <" + std::string(typeid(T*).name()) + ">."));
         return EObjectRef<T>(mId, dynamic_cast<T*>(this));
     }
 protected:
@@ -181,12 +187,15 @@ public:
     {
         mInitialized = false;
     }
+
     bool isInitialized() const
     {
         return mInitialized;
     }
     bool runQueued(const std::function<void(void)>& functor) const
     {
+        if(!mInitialized)
+            throw std::runtime_error("[EThread] EObjectRef::runQueued() is called on a empty reference.");
         std::shared_lock<std::shared_mutex> lock(EObject::mutexActiveEObjectIds);
         auto eObjectPtrIter = EObject::activeEObjectIds.find(mEObjectId);
         if (eObjectPtrIter == EObject::activeEObjectIds.end())
@@ -198,6 +207,14 @@ protected:
     int mEObjectId;
     EObject* mUntypedEObjectUnsafePtr;
     bool mInitialized;
+private:
+    UntypedEObjectRef(int id, EObject* ptr)
+    {
+        mEObjectId = id;
+        mUntypedEObjectUnsafePtr = ptr;
+        mInitialized = true;
+    }
+friend EObject;
 };
 
 template <class EObjectType>
@@ -208,6 +225,8 @@ public:
     template<typename RetType, class... Args>
     bool callQueued(RetType (EObjectType::*funcPtr)(Args...), Args... args)
     {
+        if(!mInitialized)
+            throw std::runtime_error("[EThread] EObjectRef::callQueued() is called on a empty reference.");
         std::shared_lock<std::shared_mutex> lock(EObject::mutexActiveEObjectIds);
         auto eObjectPtrIter = EObject::activeEObjectIds.find(mEObjectId);
         if (eObjectPtrIter == EObject::activeEObjectIds.end())

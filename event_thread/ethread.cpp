@@ -38,6 +38,11 @@ ethr::EThread & ethr::EObject::threadInAffinity()
     return *mThreadInAffinity;
 }
 
+ethr::UntypedEObjectRef ethr::EObject::uref()
+{
+    return UntypedEObjectRef(mId, this);
+}
+
 ethr::EThread::EThread(const std::string &name)
 {
     mIsMain = false;
@@ -221,6 +226,10 @@ void ethr::EThread::removeChildEObject(EObject* eObjectPtr)
 
 ethr::EThread & ethr::EThread::mainThread()
 {
+    if(EThread::mainEThreadPtr == nullptr)
+        throw std::runtime_error(
+                "[EThread] EThread::mainThread() is called but no main thread is assigned. "
+                "Use EThread::provideMainThread() to assign a main thread.");
     return *EThread::mainEThreadPtr;
 }
 

@@ -24,6 +24,8 @@ class EPromise : public EDeletable
 public:
     EPromise(UntypedEObjectRef eObjectRef, const std::function<PromiseType(ParamTypes...)> functor)
     {
+        if(!eObjectRef.isInitialized())
+            throw std::runtime_error("[EThread] EPromise is created using empty EObject reference.");
         mTargetEObjectRef = eObjectRef;
         mExecuteFunctor = functor;
         mThenPromisePtr = nullptr;
@@ -65,6 +67,7 @@ public:
                     mCatchFunctor(eptr);
                 });
             }
+
             delete this;
         });
     }
