@@ -238,3 +238,15 @@ void ethr::EThread::provideMainThread(ethr::EThread &ethread)
     EThread::mainEThreadPtr = &ethread;
     ethread.mIsMain = true;
 }
+
+void ethr::EThread::waitForEventHandleCompletion()
+{
+    while(true)
+    {
+        std::unique_lock<std::mutex> lock(mMutexEventQueue);
+        if(mEventQueue.empty())
+            return;
+        lock.unlock();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}

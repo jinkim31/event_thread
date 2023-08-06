@@ -82,6 +82,7 @@ public:
 
     void handleQueuedEvents();
 
+    void waitForEventHandleCompletion();
     static void provideMainThread(EThread& ethread);
     static void stopMainThread();
     static EThread & mainThread();
