@@ -51,6 +51,7 @@ ethr::EThread::EThread(const std::string &name)
     mIsLoopRunning = false;
     mEventHandleScheme = EventHandleScheme::AFTER_TASK;
     mLoopPeriod = std::chrono::milliseconds(1);
+    mNEventQueueReservedForHandle = 0;
 }
 
 ethr::EThread::~EThread()
@@ -141,15 +142,21 @@ void *ethr::EThread::threadEntryPoint(void *param)
 void ethr::EThread::handleQueuedEvents()
 {
     // lock mMutexEventHandling to prohibit event deletion when chile EObject::removeFromThread()
-    std::unique_lock<std::mutex> executionLock(mMutexEventHandling);
+    if(mNEventQueueReservedForHandle == 0)
+        // mNEventQueueReservedForHandle == 0 means its the first call in the recursion
+        std::unique_lock<std::mutex> executionLock(mMutexEventHandling);
+
 
     size_t nQueuedEvent = mEventQueue.size();
-    for(int i=0; i<nQueuedEvent; i++)
+    size_t nHandlingEventsHere = nQueuedEvent - mNEventQueueReservedForHandle;
+    size_t iHandleStartEvent = mNEventQueueReservedForHandle;
+    mNEventQueueReservedForHandle += nHandlingEventsHere;
+
+    for(int i=0; i<nHandlingEventsHere; i++)
     {
         // lock mMutexEventQueue to access event queue
         std::unique_lock<std::mutex> eventLock(mMutexEventQueue);
-        auto func = mEventQueue.front().second;
-        mEventQueue.pop_front();
+        auto func = mEventQueue[iHandleStartEvent + i].second;
 
         // unlocking mMutexEventQueue allows event push between event executions
         eventLock.unlock();
@@ -157,6 +164,11 @@ void ethr::EThread::handleQueuedEvents()
        // execute function
        func();
     }
+
+    for(int i=0; i<nHandlingEventsHere; i++)
+        mEventQueue.pop_front();
+
+    mNEventQueueReservedForHandle -= nHandlingEventsHere;
 }
 
 void ethr::EThread::stopMainThread()

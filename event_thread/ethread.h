@@ -110,6 +110,7 @@ private:
     EventHandleScheme mEventHandleScheme;
     std::vector<int> mChildEObjectsIds;
     static EThread* mainEThreadPtr;
+    size_t mNEventQueueReservedForHandle;
 
     bool checkLoopRunningSafe();
 
