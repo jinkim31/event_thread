@@ -1,6 +1,25 @@
 # Event Thread
 ### Asynchronous Multithreading Framework
 
+# Design Philosophy
+
+## Tightly Coupled
+**This is no UI framework.** The classes defining the thread workers are tightly coupled.
+It means the classes have dependencies to each other and cannot be used nor compiled alone.
+However, classes defined to be used in multithreaded system are so specifically designed for the system and therefore not likely to be used in other systems or projects.
+Also, we benefit from not having to define separate "signals" and "slots"(in Qt). Just one would do.
+
+## High Performance
+This framework was built for performance by utilizing available computing resource effectively.
+The period of event loop can be adjusted all the way to 0(which will make the loop as fast as it can run without thread sleep), 
+and high-frequency timers can be very accurate. It works well with CUDA which can suffer from massive overhead when the thread sleeps.
+
+## Rapid Development
+This framework has no dependency other than standard C++ libraries. 
+Therefore, one can build the framework and create a multithreaded system quickly. 
+It provides user friendly way of "wiring" function calls across threads which has been the most time-consuming
+part of developing multithreaded system.
+
 # Getting Started
 
 ## The Main Thread
