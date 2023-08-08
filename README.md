@@ -1,5 +1,5 @@
 # Event Thread
-### An Asynchronous Multithreading Framework
+### Asynchronous Multithreading Framework
 
 # Getting Started
 
@@ -197,7 +197,8 @@ However, in this case two things are different.
 First, `callQueued()` is called with the reference of the `app`, `EObjectRef<App> mAppRef`. The reference is created and passed to the `mWorker` using the dependency injection function `void setAppRef()`.
 Second, `App::progressReported` has a `int` parameter. This parameter can be passed by using the variadic argument of `callQueued()`.
 
-> Rather than passing raw pointers to other threads which is extremely unsafe due to the dangling pointers, it is highly recommended to use reference when passing `EObjects` to other threads.
+> Rather than passing raw pointers to other `EObjects` which is extremely unsafe due to the dangling pointers, it is highly recommended to pass `EObjectRef`s as reference of it instead.
+> `EObjectRef` guarantees safe inter-thread operation even when the target `EObject` no longer exists or removed from its thread.
 
 > For this kind of architecture where two classes uses each other, mutual inclusion that two header files include each other is a common issue.
 > As shown in the example(in `worker.h` and `worker.cpp`), forward-declare the other class in the header file and include in the cpp file.
