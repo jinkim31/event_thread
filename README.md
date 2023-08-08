@@ -81,7 +81,7 @@ The second task of id 1 calls `EThread::stopMainThread()` which stops the main t
 > The lambda passed as the `callback` parameter of `ETimer::addTask()` will run in the thread that the `ETimer` is moved to.
 > For thread safety, make sure to move the `EThread` to the same thread that the parent EObject(in this case `App`) is in.
 
-> Also note that in the destructor, `mTimer` is removed from the thread for a proper `EThread` destruction. 
+> Note that in the destructor, `mTimer` is removed from the thread for a proper `EThread` destruction. 
 
 ## Inter-thread Communications
 Event Thread support inter-thread communications that call a public member function of the other `EObject`s in other threads in a thread-safe manner.
