@@ -20,11 +20,11 @@ Therefore, one can build the framework and create a multithreaded system quickly
 It provides a user-friendly way of "wiring" function calls across threads which have been the most time-consuming
 part of developing a multithreaded system.
 
-# Supported Platforms
-- **Windows**: tested on Windows 10 x86_64
-- **Linux**: tested on Ubuntu 22.04 x86_64
-- **MacOS**: tested on MacOS 13 Ventura ARM64
-- **Raspberry Pi OS**: tested on Raspberry Pi OS Lite(Debian Bullseye, 32bit) Raspberry Pi Zero 2 W
+# Tested Platforms
+- **Windows**: Windows 10, x86-64
+- **Linux**: Ubuntu 22.04, x86-64
+- **MacOS**: MacOS 13 Ventura, ARM64
+- **Raspberry Pi OS**: Raspberry Pi OS Lite(Debian Bullseye, 32bit), Raspberry Pi Zero 2 W
 
 # Getting Started
 
