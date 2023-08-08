@@ -6,7 +6,7 @@
 ## Tightly Coupled
 **This is no UI framework.** The classes defining the thread workers are tightly coupled.
 It means the classes have dependencies on each other and cannot be used nor compiled alone.
-However, classes defined to be used in multithreaded systems are so specifically designed for the system and therefore not likely to be used in other systems or projects.
+However, this is not an issue because classes defined to be used in multithreaded systems are so specifically designed for the system and therefore not likely to be used separately nor used in other systems or projects.
 Also, we benefit from not having to define separate "signals" and "slots"(in Qt). Just one would do.
 
 ## High Performance
