@@ -5,7 +5,7 @@
 
 ## The Main Thread
 Event Thread uses thread & worker architecture which means you need to define a worker class
-which contains the process you want to run and move the worker to the main thread so that the worker can actually work.
+that contains the process you want to run and move the worker to the main thread so that the worker can actually work.
 ```c++
 #include <ethread.h>
 #include "app.h"
@@ -74,9 +74,9 @@ In that example, an instance of `App` is created and moved to the main thread.
 In the `App` class, it has a `ETimer` `mTimer` as a member and moves it to the same main thread in the constructor.
 The constructor adds a task to the timer using `ETimer::addTask()` 
 which takes a unique task id, period, callback lambda that would be called every loop, and optional ttl(time to live) of the task.
-The first task of id 0 prints "timer callback" is 3 times with 1000 milliseconds interval between.
+The first task of id 0 prints "timer callback" is 3 times with the interval of 1000 milliseconds between.
 The second task of id 1 calls `EThread::stopMainThread()` which stops the main thread and finally terminates the program.
-`ETimer::start()` finally starts the timer execute the tasks.
+`ETimer::start()` finally starts the timer to start executing the tasks.
 
 > The lambda passed as `callback` parameter of `ETimer::addTask()` will run in the thread that the `ETimer` is moved to.
 > For thread safety, make sure to move the `EThread` to the same thread that the parent EObject(in this case `App`) is in.
@@ -84,7 +84,7 @@ The second task of id 1 calls `EThread::stopMainThread()` which stops the main t
 > Also note that in the destructor, `mTimer` is removed from the thread for a proper `EThread` destruction. 
 
 ## Inter-thread Communications
-Event Thread support thread-safe inter-thread communications that executes public member function of the other `EObject`s in other threads.
+Event Thread support inter-thread communications that calls public member function of the other `EObject`s in other threads in a thread-safe manner.
 
 `app.h`
 ```c++
@@ -145,8 +145,9 @@ void App::progressReported(int progress)
 ```
 Here's an updated version of `App` class. It now has a new worker, `mWorker` and a thread `mWorkerThread` that `mWorker` is moved to.
 `mWorker`is an instance of class `Worker` which will be explained later.
-With `ETimer::addTask()` a new task is added to the timer that after 0 millisecond of the timer start,
-it will execute a public member function `Worker::work`. This is implemented by calling `EObject::callQueued()` with the function pointer as the parameter.
+With `ETimer::addTask()` a new task is added to the timer.
+it will execute a public member function `Worker::work` of `mWorker` right after the timer start.
+This is implemented by calling `EObject::callQueued()` with the function pointer as its parameter.
 
 `worker.h`
 ```c++
@@ -193,7 +194,14 @@ Here's the `Worker` class mentioned above. It's a thread worker that has the pub
 `Worker::work()` performs a "time-consuming" operation which is just a combination of sleep and another `EObject::callQueued()` that calls one of `app`'s public functions `App::progressReported()`
 However, in this case two things are different. 
 First, `callQueued()` is called with the reference of the `app`, `EObjectRef<App> mAppRef`. The reference is created and passed to the `mWorker` using the dependency injection function `void setAppRef()`.
-Second, `App::progressReported` has a `int` parameter. This parameter can be passed by using the variadic argument of `callQueued()`.
+The reference can be acquired using `EObject::ref<EObjectType>()`.
+Second, `App::progressReported` has a parameter of type `int`. The function can be called with parameter by using the variadic argument of `callQueued()`.
+Just add it after the function pointer.
+For a function that has multiple parameters, add the values you want to pass after the function pointer in order. 
+
+> For thread-safety, use call-by-value for the functions you want to call inter-thread.
+> Pointers or references may allow multiple threads to access to the same memory simultaneously.
+> For large objects or pointer wrappers(e.g. OpenCV Mats) you NEED to use pointers or references, use move semantics so that only one thread has it.
 
 > Rather than passing raw pointers to other `EObjects` which is extremely unsafe due to the dangling pointers, it is highly recommended to pass `EObjectRef`s as reference of it instead.
 > `EObjectRef` guarantees safe inter-thread operations even when the target `EObject` no longer exists or removed from its thread.
