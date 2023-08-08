@@ -293,5 +293,5 @@ Then, a task is added to `ETimer mTimer` that uses promises to chain function ca
 > Note that `EPromise` has to be dynamically allocated using `new`. 
 > The user should NOT delete the allocated promise since the deletion is handled automatically.
 
-JinKim2022@AnsurLab@KIST
+JinKim2022@AnsurLab@KIST\
 JinKim2023@HumanLab@KAIST
