@@ -24,16 +24,16 @@ int main()
 ```
 The main worker class here in the example is the `App` class, and it inherits from `EObject` class.
 In the main function, a new `EThread` called `mainThread` is created and set as the main thread with `EThread::provideMainThread()`.
-Then, instance of `App` is created and moved to the `mainThread`.
+Then, the instance of `App` is created and moved to the `mainThread`.
 Finally, the main thread `mainThread` is started using `EThread.start()`. 
 Since it is the main thread, `EThread.start()` blocks the flow and runs the event loop that handles the events and inter-thread communications
-(if it's not the main thread, `EThread.start()` won't block and create new thread to run its event loop).
-When `EThread::stopMainThread()` is called anywhere in the program, event loop of the main thread is stopped and `EThread.start()` returns.
+(if it's not the main thread, `EThread.start()` won't block and create a new thread to run its event loop).
+When `EThread::stopMainThread()` is called anywhere in the program, the event loop of the main thread is stopped, and `EThread.start()` returns.
 For every thread worker that moved to a thread, it has to be explicitly removed from the thread before the thread is destructed.
-Therefore, `EObject::removeFromThread()` is used to remove the worker `app` from the thread before `mainThread` is go out of the scope and destructed.
+Therefore, `EObject::removeFromThread()` is used to remove the worker `app` from the thread before `mainThread` goes out of the scope and gets destructed.
 
 ## Timers
-`ETimer` is used to make some process run in a periodic loop.
+`ETimer` is used to make some processes run in a periodic loop.
 ```c++
 #include <ethread.h>
 #include <etimer.h>
@@ -71,20 +71,20 @@ App::~App()
 `ETimer` is a thread worker that inherits from `EObject` so
 it has to be moved to a thread for it to work. In the example above the `App` class that has been used in `The Main Thread` example is shown.
 In that example, an instance of `App` is created and moved to the main thread. 
-In the `App` class, it has a `ETimer` `mTimer` as a member and moves it to the same main thread in the constructor.
+In the `App` class, it has an `ETimer` `mTimer` as a member and moves it to the same main thread in the constructor.
 The constructor adds a task to the timer using `ETimer::addTask()` 
 which takes a unique task id, period, callback lambda that would be called every loop, and optional ttl(time to live) of the task.
-The first task of id 0 prints "timer callback" is 3 times with the interval of 1000 milliseconds between.
+The first task of id 0 prints "timer callback" 3 times with an interval of 1000 milliseconds between.
 The second task of id 1 calls `EThread::stopMainThread()` which stops the main thread and finally terminates the program.
 `ETimer::start()` finally starts the timer to start executing the tasks.
 
-> The lambda passed as `callback` parameter of `ETimer::addTask()` will run in the thread that the `ETimer` is moved to.
+> The lambda passed as the `callback` parameter of `ETimer::addTask()` will run in the thread that the `ETimer` is moved to.
 > For thread safety, make sure to move the `EThread` to the same thread that the parent EObject(in this case `App`) is in.
 
 > Also note that in the destructor, `mTimer` is removed from the thread for a proper `EThread` destruction. 
 
 ## Inter-thread Communications
-Event Thread support inter-thread communications that calls public member function of the other `EObject`s in other threads in a thread-safe manner.
+Event Thread support inter-thread communications that call a public member function of the other `EObject`s in other threads in a thread-safe manner.
 
 `app.h`
 ```c++
@@ -143,7 +143,7 @@ void App::progressReported(int progress)
         EThread::stopMainThread();
 }
 ```
-Here's an updated version of `App` class. It now has a new worker, `mWorker` and a thread `mWorkerThread` that `mWorker` is moved to.
+Here's an updated version of the `App` class. It now has a new worker, `mWorker`, and a thread `mWorkerThread` that `mWorker` is moved to.
 `mWorker`is an instance of class `Worker` which will be explained later.
 With `ETimer::addTask()` a new task is added to the timer.
 it will execute a public member function `Worker::work` of `mWorker` right after the timer start.
@@ -192,26 +192,26 @@ void Worker::work()
 ```
 Here's the `Worker` class mentioned above. It's a thread worker that has the public member function `Worker::work()`, the very function that `app` called using `EObject::callQueued()`.
 `Worker::work()` performs a "time-consuming" operation which is just a combination of sleep and another `EObject::callQueued()` that calls one of `app`'s public functions `App::progressReported()`
-However, in this case two things are different. 
+However, in this case, two things are different. 
 First, `callQueued()` is called with the reference of the `app`, `EObjectRef<App> mAppRef`. The reference is created and passed to the `mWorker` using the dependency injection function `void setAppRef()`.
 The reference can be acquired using `EObject::ref<EObjectType>()`.
-Second, `App::progressReported` has a parameter of type `int`. The function can be called with parameter by using the variadic argument of `callQueued()`.
+Second, `App::progressReported` has a parameter of type `int`. The function can be called with the parameter by using the variadic argument of `callQueued()`.
 Just add it after the function pointer.
 For a function that has multiple parameters, add the values you want to pass after the function pointer in order. 
 
-> For thread-safety, use call-by-value for the functions you want to call inter-thread.
+> For thread safety, use call-by-value for the functions you want to call inter-thread.
 > Pointers or references may allow multiple threads to access to the same memory simultaneously.
-> For large objects or pointer wrappers(e.g. OpenCV Mats) you NEED to use pointers or references, use move semantics so that only one thread owns it .
+> For large objects or pointer wrappers(e.g. OpenCV Mats) you NEED to use pointers or references, use move semantics so that only one thread owns it at a time.
 
-> Rather than passing raw pointers to other `EObjects` which is extremely unsafe due to the dangling pointers, it is highly recommended to pass `EObjectRef`s as reference of it instead.
-> `EObjectRef` guarantees safe inter-thread operations even when the target `EObject` no longer exists or removed from its thread.
+> Rather than passing a raw pointer to other `EObject`s which is extremely unsafe due to the dangling pointers, it is highly recommended to pass a `EObjectRef` as a reference of it instead.
+> `EObjectRef` guarantees safe inter-thread operations even when the target `EObject` is removed from its thread for destruction.
 
-> For this kind of architecture where two classes uses each other, mutual inclusion that two header files include each other is a common issue.
+> For this kind of architecture where two classes use each other, mutual inclusion that two header files include each other is a common issue.
 > As shown in the example(in `worker.h` and `worker.cpp`), forward-declare the other class in the header file and include in the cpp file.
 
 ## Promises
 `EPromise` class provides high-level async operations that resemble promises from Javascript.
-`EPromise::then()` is used to chain multiple function to be executed sequentially from different objects across different threads.
+`EPromise::then()` is used to chain multiple functions to be executed sequentially from different objects across different threads.
 `EPromise::cat()` is used to capture any exceptions that are thrown during the execution of the chain.
 ```c++
 #include <ethread.h>
@@ -295,7 +295,7 @@ int main()
     app.removeFromThread();
 }
 ```
-In the constructor of class `App`, 10 workers are moved to their own threads and the threads are started. 
+In the constructor of class `App`, 10 workers are moved to their own threads, and the threads are started. 
 Then, a task is added to `ETimer mTimer` that uses promises to chain function calls across different threads.
 
 > Note that `EPromise` has to be dynamically allocated using `new`. 
