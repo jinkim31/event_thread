@@ -1,5 +1,5 @@
 # Event Thread
-### Asynchronous Multithreading Framework
+### C++ Asynchronous Multithreading Framework
 
 # Design Philosophy
 
@@ -19,6 +19,12 @@ This framework has no dependency other than standard C++ libraries.
 Therefore, one can build the framework and create a multithreaded system quickly. 
 It provides a user-friendly way of "wiring" function calls across threads which have been the most time-consuming
 part of developing a multithreaded system.
+
+# Supported Platforms
+- **Windows**: tested on Windows 10 x86_64
+- **Linux**: tested on Ubuntu 22.04 x86_64
+- **MacOS**: tested on MacOS 13 Ventura ARM64
+- **Raspberry Pi OS**: tested on Raspberry Pi OS Lite(Debian Bullseye, 32bit) Raspberry Pi Zero 2 W
 
 # Getting Started
 
@@ -321,6 +327,12 @@ Then, a task is added to `ETimer mTimer` that uses a promise to chain function c
 > The user should NOT delete the promises. The deletion is handled automatically.
 
 > Promise will not run if the thread that target `EObject` is in has not been started or the `EObject` has been removed from its thread. 
+
+# Tips & Tricks
+
+## Recursive Event Queue Handling
+
+## Waiting for Event Queue Empty
 
 JinKim2022@AnsurLab@KIST\
 JinKim2023@HumanLab@KAIST
