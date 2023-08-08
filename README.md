@@ -1,4 +1,5 @@
-# EThread - an Asynchronous Multithreading Framework
+# Event Thread
+### An Asynchronous Multithreading Framework
 
 # Getting Started
 
