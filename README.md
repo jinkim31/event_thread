@@ -1,5 +1,5 @@
 # Event Thread
-### C++ Asynchronous Multithreading Framework
+### Asynchronous Multithreading Framework in C++
 
 # Design Philosophy
 
