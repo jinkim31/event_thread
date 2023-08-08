@@ -201,7 +201,7 @@ For a function that has multiple parameters, add the values you want to pass aft
 
 > For thread-safety, use call-by-value for the functions you want to call inter-thread.
 > Pointers or references may allow multiple threads to access to the same memory simultaneously.
-> For large objects or pointer wrappers(e.g. OpenCV Mats) you NEED to use pointers or references, use move semantics so that only one thread has it.
+> For large objects or pointer wrappers(e.g. OpenCV Mats) you NEED to use pointers or references, use move semantics so that only one thread owns it .
 
 > Rather than passing raw pointers to other `EObjects` which is extremely unsafe due to the dangling pointers, it is highly recommended to pass `EObjectRef`s as reference of it instead.
 > `EObjectRef` guarantees safe inter-thread operations even when the target `EObject` no longer exists or removed from its thread.
