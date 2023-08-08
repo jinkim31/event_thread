@@ -80,7 +80,7 @@ The second task of id 1 calls `EThread::stopMainThread()` which stops the main t
 `ETimer::start()` finally starts the timer execute the tasks.
 
 > The lambda passed as `callback` parameter of `ETimer::addTask()` will run in the thread that the `ETimer` is moved to.
-> For thread safety, make sure to move the `EThread` to the same thread that the parent EObject(in this case App) is in.
+> For thread safety, make sure to move the `EThread` to the same thread that the parent EObject(in this case `App`) is in.
 
 > Also note that in the destructor, `mTimer` is removed from the thread for a proper `EThread` destruction. 
 
@@ -194,8 +194,9 @@ Here's the `Worker` class mentioned above. It's a thread worker that has the pub
 `Worker::work()` performs a "time-consuming" operation which is just a combination of sleep and another `EObject::callQueued()` that calls one of `app`'s public functions `App::progressReported()`
 However, in this case two things are different. 
 First, `callQueued()` is called with the reference of the `app`, `EObjectRef<App> mAppRef`. The reference is created and passed to the `mWorker` using the dependency injection function `void setAppRef()`.
-Rather than passing raw pointers to other threads which is extremely unsafe due to the dangling pointers, it is highly recommended to use reference when passing `EObjects` to other threads.
 Second, `App::progressReported` has a `int` parameter. This parameter can be passed by using the variadic argument of `callQueued()`.
+
+> Rather than passing raw pointers to other threads which is extremely unsafe due to the dangling pointers, it is highly recommended to use reference when passing `EObjects` to other threads.
 
 > For this kind of architecture where two classes uses each other, mutual inclusion that two header files include each other is a common issue.
 > As shown in the example(in `worker.h` and `worker.cpp`), forward-declare the other class in the header file and include in the cpp file.
@@ -291,3 +292,6 @@ Then, a task is added to `ETimer mTimer` that uses promises to chain function ca
 
 > Note that `EPromise` has to be dynamically allocated using `new`. 
 > The user should NOT delete the allocated promise since the deletion is handled automatically.
+
+JinKim2022@AnsurLab@KIST
+JinKim2023@HumanLab@KAIST
