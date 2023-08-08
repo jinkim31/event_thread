@@ -296,10 +296,10 @@ int main()
 }
 ```
 In the constructor of class `App`, 10 workers are moved to their own threads, and the threads are started. 
-Then, a task is added to `ETimer mTimer` that uses promises to chain function calls across different threads.
+Then, a task is added to `ETimer mTimer` that uses a promise to chain function calls across different threads.
 
 > Note that `EPromise` has to be dynamically allocated using `new`. 
-> The user should NOT delete the allocated promise since the deletion is handled automatically.
+> The user should NOT delete the promises. The deletion is handled automatically.
 
 > Promise will not run if the thread that target `EObject` is in has not been started or the `EObject` has been removed from its thread. 
 
