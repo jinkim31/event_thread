@@ -4,11 +4,10 @@
 # Getting Started
 
 ## The Main Thread
-
+Event Thread uses thread & worker architecture which means you need to define a worker class
+which contains the process you want to run and move the worker to the main thread so that the worker can actually work.
 ```c++
-#include <iostream>
 #include <ethread.h>
-
 #include "app.h"
 
 using namespace ethr;
@@ -23,8 +22,6 @@ int main()
     app.removeFromThread();
 }
 ```
-Event Thread uses thread & worker architecture which means you need to define a worker class
-which contains the process you want to run and move the worker to the main thread so that the worker can actually work.
 The main worker class here in the example is the `App` class, and it inherits from `EObject` class.
 In the main function, a new `EThread` called `mainThread` is created and set as the main thread with `EThread::provideMainThread()`.
 Then, instance of `App` is created and moved to the `mainThread`.
@@ -36,6 +33,7 @@ For every thread worker that moved to a thread, it has to be explicitly removed 
 Therefore, `EObject::removeFromThread()` is used to remove the worker `app` from the thread before `mainThread` is go out of the scope and destructed.
 
 ## Timers
+`ETimer` is used to make some process run in a periodic loop.
 ```c++
 #include <ethread.h>
 #include <etimer.h>
@@ -70,7 +68,7 @@ App::~App()
     mTimer.removeFromThread();
 }
 ```
-`ETimer` is used to make some process run in a periodic loop. `ETimer` is a thread worker that inherits from `EObject` so
+`ETimer` is a thread worker that inherits from `EObject` so
 it has to be moved to a thread for it to work. In the example above the `App` class that has been used in `The Main Thread` example is shown.
 In that example, an instance of `App` is created and moved to the main thread. 
 In the `App` class, it has a `ETimer` `mTimer` as a member and moves it to the same main thread in the constructor.
@@ -86,7 +84,7 @@ The second task of id 1 calls `EThread::stopMainThread()` which stops the main t
 > Also note that in the destructor, `mTimer` is removed from the thread for a proper `EThread` destruction. 
 
 ## Inter-thread Communications
-Event Thread support thread-safe inter-thread communications that executes public member function of the other `EObject`s of other threads.
+Event Thread support thread-safe inter-thread communications that executes public member function of the other `EObject`s in other threads.
 
 `app.h`
 ```c++

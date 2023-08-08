@@ -1,7 +1,4 @@
-#include <iostream>
 #include <ethread.h>
-#include <etimer.h>
-
 #include "app.h"
 
 using namespace ethr;
