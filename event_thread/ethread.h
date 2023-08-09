@@ -171,6 +171,8 @@ public:
     }
 protected:
     EThread & threadInAffinity();
+    virtual void onMovedToThread(EThread& ethread){};
+    virtual void onRemovedFromThread(){};
 private:
     int mId;
     EThread *mThreadInAffinity;

@@ -13,6 +13,8 @@ ethr::EObject::EObject()
 
 void ethr::EObject::moveToThread(ethr::EThread& ethread)
 {
+    onMovedToThread(ethread);
+
     if(mThreadInAffinity)
         mThreadInAffinity->removeChildEObject(this);
     mThreadInAffinity = &ethread;
@@ -25,6 +27,8 @@ void ethr::EObject::removeFromThread()
         return;
     mThreadInAffinity->removeChildEObject(this);
     mThreadInAffinity = nullptr;
+
+    onRemovedFromThread();
 }
 
 ethr::EObject::~EObject()
