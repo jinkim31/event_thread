@@ -21,10 +21,13 @@ It provides a user-friendly way of "wiring" function calls across threads which 
 part of developing a multithreaded system.
 
 # Tested Platforms
-- **Windows**: Windows 10, x86-64
-- **Linux**: Ubuntu 22.04, x86-64
-- **MacOS**: MacOS 13 Ventura, ARM64
-- **Raspberry Pi OS**: Raspberry Pi OS Lite(Debian Bullseye, 32bit), Raspberry Pi Zero 2 W
+- **Windows**
+    - Windows 10 / x86-64
+- **Linux**:
+    - Ubuntu 22.04 / x86-64
+    - Raspberry Pi OS Lite(Debian Bullseye, 32bit) / Raspberry Pi Zero 2 W
+- **MacOS**:
+    - MacOS 12, 13 / ARM64
 
 # Getting Started
 
