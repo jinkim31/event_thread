@@ -263,17 +263,29 @@ public:
     }
 
     template<typename RetType, class... Args>
-    bool callQueuedMove(RetType (EObjectType::*funcPtr)(const Args&...), Args&&... args)
+    bool callQueuedMove(RetType (EObjectType::*funcPtr)(Args&&...), Args&&... args)
     {
-        std::cout<<"B"<<std::endl;
         if(!mInitialized)
             throw std::runtime_error("[EThread] EObjectRef::callQueued() is called on a empty reference.");
         std::shared_lock<std::shared_mutex> lock(EObject::mutexActiveEObjectIds);
         auto eObjectPtrIter = EObject::activeEObjectIds.find(mEObjectId);
         if (eObjectPtrIter == EObject::activeEObjectIds.end())
             return false;
-        std::cout<<"C"<<std::endl;
         eObjectPtrIter->second->callQueuedMove(funcPtr, std::move(args...));
+        return true;
+    }
+
+    // no args version
+    template<typename RetType>
+    bool callQueuedMove(RetType (EObjectType::*funcPtr)())
+    {
+        if(!mInitialized)
+            throw std::runtime_error("[EThread] EObjectRef::callQueued() is called on a empty reference.");
+        std::shared_lock<std::shared_mutex> lock(EObject::mutexActiveEObjectIds);
+        auto eObjectPtrIter = EObject::activeEObjectIds.find(mEObjectId);
+        if (eObjectPtrIter == EObject::activeEObjectIds.end())
+            return false;
+        eObjectPtrIter->second->callQueuedMove(funcPtr);
         return true;
     }
 
