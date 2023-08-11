@@ -114,7 +114,7 @@ private:
 
     bool checkLoopRunningSafe();
 
-    void queueNewEvent(int eObjectId, const std::function<void()> &func);
+    void queueNewEvent(int eObjectId, std::function<void()> &&func);
 
     void runLoop();
 
@@ -150,20 +150,30 @@ public:
     }
 
     template<typename RetType, typename ObjType, class... Args>
-    void callQueuedMove(RetType (ObjType::*funcPtr)(const Args&...), Args&&... args)
+    void callQueuedMove(RetType (ObjType::*funcPtr)(Args&&...), Args&&... args)
     {
-        std::cout<<"D"<<std::endl;
         if (mThreadInAffinity == nullptr)
             throw std::runtime_error("EObject::callQueued() is called but no EThread is assigned to it.");
-        mThreadInAffinity->queueNewEvent(mId, std::bind(funcPtr, (ObjType *) this, args...));
-        std::cout<<"G"<<std::endl;
-        //mThreadInAffinity->queueNewEvent(mId, [&]{(((ObjType*)this)->*funcPtr)(std::move(args...));});
+        //mThreadInAffinity->queueNewEvent(mId, std::bind(funcPtr, (ObjType *) this,std::move(args...)));
+        auto func = [=, this, args = std::move(args...)]()mutable{(((ObjType*)this)->*funcPtr)(std::move(args));};
+        mThreadInAffinity->queueNewEvent(mId, std::move(func));
     }
 
 
-    void runQueued(const std::function<void(void)>& functor)
+    // no args version
+    template<typename RetType, typename ObjType>
+    void callQueuedMove(RetType (ObjType::*funcPtr)())
     {
-        mThreadInAffinity->queueNewEvent(mId, functor);
+        if (mThreadInAffinity == nullptr)
+            throw std::runtime_error("EObject::callQueued() is called but no EThread is assigned to it.");
+        //mThreadInAffinity->queueNewEvent(mId, std::bind(funcPtr, (ObjType *) this,std::move(args...)));
+        auto func = [=, this]()mutable{(((ObjType*)this)->*funcPtr)();};
+        mThreadInAffinity->queueNewEvent(mId, std::move(func));
+    }
+
+    void runQueued(std::function<void(void)> &&functor)
+    {
+        mThreadInAffinity->queueNewEvent(mId, std::move(functor));
     }
 
     void moveToThread(EThread &ethread);
@@ -208,7 +218,7 @@ public:
     {
         return mInitialized;
     }
-    bool runQueued(const std::function<void(void)>& functor) const
+    bool runQueued(std::function<void(void)> &&functor) const
     {
         if(!mInitialized)
             throw std::runtime_error("[EThread] EObjectRef::runQueued() is called on a empty reference.");
@@ -216,7 +226,7 @@ public:
         auto eObjectPtrIter = EObject::activeEObjectIds.find(mEObjectId);
         if (eObjectPtrIter == EObject::activeEObjectIds.end())
             return false;
-        eObjectPtrIter->second->runQueued(functor);
+        eObjectPtrIter->second->runQueued(std::move(functor));
         return true;
     }
 protected:

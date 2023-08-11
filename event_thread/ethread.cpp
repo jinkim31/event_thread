@@ -127,14 +127,14 @@ void ethr::EThread::stop()
     }
 }
 
-void ethr::EThread::queueNewEvent(int eObjectId, const std::function<void()> &func)
+void ethr::EThread::queueNewEvent(int eObjectId, std::function<void()> &&func)
 {
-    std::cout<<"E"<<std::endl;
     std::unique_lock<std::mutex> lock(mMutexEventQueue);
     if(std::find(mChildEObjectsIds.begin(), mChildEObjectsIds.end(), eObjectId) == mChildEObjectsIds.end())
         return;
-    if(mEventQueue.size() < mEventQueueSize) mEventQueue.emplace_back(eObjectId, func);
-    std::cout<<"F"<<std::endl;
+    //if(mEventQueue.size() < mEventQueueSize) mEventQueue.emplace_back(eObjectId, func);
+    //auto a = std::make_pair(std::move(eObjectId), std::move(func));
+    if(mEventQueue.size() < mEventQueueSize) mEventQueue.emplace_back(eObjectId, std::move(func));
 }
 
 void *ethr::EThread::threadEntryPoint(void *param)
@@ -162,7 +162,7 @@ void ethr::EThread::handleQueuedEvents()
     {
         // lock mMutexEventQueue to access event queue
         std::unique_lock<std::mutex> eventLock(mMutexEventQueue);
-        auto func = mEventQueue[iHandleStartEvent + i].second;
+        auto func = std::move(mEventQueue[iHandleStartEvent + i].second);
 
         // unlocking mMutexEventQueue allows event push between event executions
         eventLock.unlock();

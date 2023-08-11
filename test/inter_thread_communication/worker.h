@@ -11,7 +11,7 @@ class Worker : public EObject
 {
 public:
     void setAppRef(const EObjectRef<App>& appRef);
-    void work();
+    void work(std::vector<int> &&numbers);
 private:
     EObjectRef<App> mAppRef;
 };

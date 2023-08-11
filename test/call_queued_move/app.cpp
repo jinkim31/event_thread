@@ -3,12 +3,14 @@
 App::App()
 {
     mWorker.moveToThread(mWorkerThread);
-    mWorker.setAppRef(this->ref<App>());
     mWorkerThread.start();
 
     mTimer.moveToThread(EThread::mainThread());
     mTimer.addTask(0, std::chrono::milliseconds(0), [&]{
-        mWorker.callQueued(&Worker::work);
+        std::cout<<"== CREATING TESTER OBJECT"<<std::endl;
+        auto tester = Worker::PassTester(123);
+        std::cout<<"== TRANSMITTING"<<std::endl;
+        mWorker.callQueuedMove(&Worker::test, std::move(tester));
     }, 1);
     mTimer.start();
 }
@@ -18,11 +20,4 @@ App::~App()
     mWorkerThread.stop();
     mWorker.removeFromThread();
     mTimer.removeFromThread();
-}
-
-void App::progressReported(int progress)
-{
-    std::cout<<"progress: "<<progress<<"/99"<<std::endl;
-    if(progress == 99)
-        EThread::stopMainThread();
 }

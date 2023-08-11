@@ -12,7 +12,6 @@ class App : public EObject
 public:
     App();
     ~App();
-    void progressReported(int progress);
 private:
     ETimer mTimer;
     EThread mWorkerThread;
