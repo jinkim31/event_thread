@@ -129,10 +129,12 @@ void ethr::EThread::stop()
 
 void ethr::EThread::queueNewEvent(int eObjectId, const std::function<void()> &func)
 {
+    std::cout<<"E"<<std::endl;
     std::unique_lock<std::mutex> lock(mMutexEventQueue);
     if(std::find(mChildEObjectsIds.begin(), mChildEObjectsIds.end(), eObjectId) == mChildEObjectsIds.end())
         return;
     if(mEventQueue.size() < mEventQueueSize) mEventQueue.emplace_back(eObjectId, func);
+    std::cout<<"F"<<std::endl;
 }
 
 void *ethr::EThread::threadEntryPoint(void *param)

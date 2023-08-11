@@ -149,6 +149,18 @@ public:
         mThreadInAffinity->queueNewEvent(mId, std::bind(funcPtr, (ObjType *) this, args...));
     }
 
+    template<typename RetType, typename ObjType, class... Args>
+    void callQueuedMove(RetType (ObjType::*funcPtr)(const Args&...), Args&&... args)
+    {
+        std::cout<<"D"<<std::endl;
+        if (mThreadInAffinity == nullptr)
+            throw std::runtime_error("EObject::callQueued() is called but no EThread is assigned to it.");
+        mThreadInAffinity->queueNewEvent(mId, std::bind(funcPtr, (ObjType *) this, args...));
+        std::cout<<"G"<<std::endl;
+        //mThreadInAffinity->queueNewEvent(mId, [&]{(((ObjType*)this)->*funcPtr)(std::move(args...));});
+    }
+
+
     void runQueued(const std::function<void(void)>& functor)
     {
         mThreadInAffinity->queueNewEvent(mId, functor);
@@ -226,6 +238,7 @@ class EObjectRef : public UntypedEObjectRef
 {
 public:
     EObjectRef()=default;
+
     template<typename RetType, class... Args>
     bool callQueued(RetType (EObjectType::*funcPtr)(Args...), Args... args)
     {
@@ -236,6 +249,21 @@ public:
         if (eObjectPtrIter == EObject::activeEObjectIds.end())
             return false;
         eObjectPtrIter->second->callQueued(funcPtr, args...);
+        return true;
+    }
+
+    template<typename RetType, class... Args>
+    bool callQueuedMove(RetType (EObjectType::*funcPtr)(const Args&...), Args&&... args)
+    {
+        std::cout<<"B"<<std::endl;
+        if(!mInitialized)
+            throw std::runtime_error("[EThread] EObjectRef::callQueued() is called on a empty reference.");
+        std::shared_lock<std::shared_mutex> lock(EObject::mutexActiveEObjectIds);
+        auto eObjectPtrIter = EObject::activeEObjectIds.find(mEObjectId);
+        if (eObjectPtrIter == EObject::activeEObjectIds.end())
+            return false;
+        std::cout<<"C"<<std::endl;
+        eObjectPtrIter->second->callQueuedMove(funcPtr, std::move(args...));
         return true;
     }
 
