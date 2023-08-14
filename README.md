@@ -83,7 +83,7 @@ App::App()
 {
     mTimer.moveToThread(EThread::mainThread());
     mTimer.addTask(0, std::chrono::milliseconds(1000), [&]{
-        std::cout<<"timer callback"<<std::endl;
+        std::cout<<"mTimer callback"<<std::endl;
     }, 3);
     mTimer.addTask(1, std::chrono::milliseconds(4000), [&]{
         EThread::stopMainThread();
@@ -100,11 +100,11 @@ App::~App()
 it has to be moved to a thread for it to work. In the example above the `App` class that has been used in `The Main Thread` example is shown.
 In that example, an instance of `App` is created and moved to the main thread. 
 In the `App` class, it has an `ETimer` `mTimer` as a member and moves it to the same main thread in the constructor.
-The constructor adds a task to the timer using `ETimer::addTask()` 
+The constructor adds a task to the mTimer using `ETimer::addTask()` 
 which takes a unique task id, period, callback lambda that would be called every loop, and optional ttl(time to live) of the task.
-The first task of id 0 prints "timer callback" 3 times with an interval of 1000 milliseconds between.
+The first task of id 0 prints "mTimer callback" 3 times with an interval of 1000 milliseconds between.
 The second task of id 1 calls `EThread::stopMainThread()` which stops the main thread and finally terminates the program.
-`ETimer::start()` finally starts the timer to start executing the tasks.
+`ETimer::start()` finally starts the mTimer to start executing the tasks.
 
 > The lambda passed as the `callback` parameter of `ETimer::addTask()` will run in the thread that the `ETimer` is moved to.
 > For thread safety, make sure to move the `EThread` to the same thread that the parent EObject(in this case `App`) is in.
@@ -173,8 +173,8 @@ void App::progressReported(int progress)
 ```
 Here's an updated version of the `App` class. It now has a new worker, `mWorker`, and a thread `mWorkerThread` that `mWorker` is moved to.
 `mWorker`is an instance of class `Worker` which will be explained later.
-With `ETimer::addTask()` a new task is added to the timer.
-it will execute a public member function `Worker::work` of `mWorker` right after the timer start.
+With `ETimer::addTask()` a new task is added to the mTimer.
+it will execute a public member function `Worker::work` of `mWorker` right after the mTimer start.
 This is implemented by calling `EObject::callQueued()` with the function pointer as its parameter.
 
 `worker.h`
@@ -277,8 +277,8 @@ public:
             workers[i].moveToThread(threads[i]);
             threads[i].start();
         }
-        timer.moveToThread(EThread::mainThread());
-        timer.addTask(0, std::chrono::milliseconds(0), [&]
+        mTimer.moveToThread(EThread::mainThread());
+        mTimer.addTask(0, std::chrono::milliseconds(0), [&]
         {
             auto promise = new EPromise(workers[0].ref<Worker>(), &Worker::multiply);
             promise
@@ -293,22 +293,22 @@ public:
             ->then(workers[9].ref<Worker>(), &Worker::multiply);
             promise->execute(2);
         }, 1);
-        timer.addTask(1, std::chrono::milliseconds(6000), []
+        mTimer.addTask(1, std::chrono::milliseconds(6000), []
         {
             EThread::stopMainThread();
         }, 1);
-        timer.start();
+        mTimer.start();
     }
     ~App()
     {
-        timer.removeFromThread();
+        mTimer.removeFromThread();
         for(auto & worker : workers)
             worker.removeFromThread();
         for(auto & thread : threads)
             thread.stop();
     }
 private:
-    ETimer timer;
+    ETimer mTimer;
     Worker workers[10];
     EThread threads[10];
 };

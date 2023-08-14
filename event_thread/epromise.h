@@ -34,7 +34,7 @@ public:
 
     template<typename EObjectType>
     EPromise(EObjectRef<EObjectType> eObjectRef, PromiseType(EObjectType::*funcPtr)(ParamTypes...))
-    : EPromise(eObjectRef, [=](ParamTypes... params){return ((*(eObjectRef.mEObjectUnsafePtr)).*funcPtr)(params...);}){}
+    : EPromise(eObjectRef, [=](ParamTypes... params){return ((*(eObjectRef.eObjectUnsafePtr())).*funcPtr)(params...);}){}
 
     void selfDestructChain()
     {

@@ -289,6 +289,7 @@ public:
         return true;
     }
 
+    EObjectType * eObjectUnsafePtr() const {return mEObjectUnsafePtr;}
 private:
     // private constructor so user can't create ref.
     EObjectRef(int eObjectId, EObjectType* eObjectPtr)
@@ -301,7 +302,6 @@ private:
 
     EObjectType* mEObjectUnsafePtr;
     friend EObject;
-    template<typename, typename...> friend class EPromise;
 };
 
 }
