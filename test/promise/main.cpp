@@ -33,38 +33,38 @@ public:
             workers[i].moveToThread(threads[i]);
             threads[i].start();
         }
-        timer.moveToThread(EThread::mainThread());
-        timer.addTask(0, std::chrono::milliseconds(0), [&]
+        mTimer.moveToThread(EThread::mainThread());
+        mTimer.addTask(0, std::chrono::milliseconds(0), this->uref(), [&]
         {
             auto promise = new EPromise(workers[0].ref<Worker>(), &Worker::multiply);
             promise
-            ->then(workers[1].ref<Worker>(), &Worker::multiply)
-            ->then(workers[2].ref<Worker>(), &Worker::multiply)
-            ->then(workers[3].ref<Worker>(), &Worker::multiply)
-            ->then(workers[4].ref<Worker>(), &Worker::multiply)
-            ->then(workers[5].ref<Worker>(), &Worker::multiply)
-            ->then(workers[6].ref<Worker>(), &Worker::multiply)
-            ->then(workers[7].ref<Worker>(), &Worker::multiply)
-            ->then(workers[8].ref<Worker>(), &Worker::multiply)
-            ->then(workers[9].ref<Worker>(), &Worker::multiply);
+                    ->then(workers[1].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[2].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[3].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[4].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[5].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[6].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[7].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[8].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[9].ref<Worker>(), &Worker::multiply);
             promise->execute(2);
         }, 1);
-        timer.addTask(1, std::chrono::milliseconds(6000), []
+        mTimer.addTask(1, std::chrono::milliseconds(6000), this->uref(), []
         {
             EThread::stopMainThread();
         }, 1);
-        timer.start();
+        mTimer.start();
     }
     ~App()
     {
-        timer.removeFromThread();
+        mTimer.removeFromThread();
         for(auto & worker : workers)
             worker.removeFromThread();
         for(auto & thread : threads)
             thread.stop();
     }
 private:
-    ETimer timer;
+    ETimer mTimer;
     Worker workers[10];
     EThread threads[10];
 };

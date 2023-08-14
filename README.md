@@ -7,17 +7,17 @@
 **This is no UI framework.** The classes defining the thread workers are tightly coupled.
 It means the classes have dependencies on each other and cannot be used nor compiled alone.
 However, this is not an issue because classes defined to be used in multithreaded systems are so specifically designed for the system and therefore not likely to be used separately nor used in other systems or projects.
-Also, we benefit from not having to define separate "signals" and "slots"(in Qt). Just one would do.
+Also, we benefit from not having to define separate signals and slots(in Qt). Just one would do.
 
 ## High Performance
-This framework was built for performance by utilizing available computing resources effectively.
+This framework was built for performance and designed to utilize available computing resources effectively.
 The period of the event loop can be adjusted all the way down to 0(which will make the loop as fast as it can run without thread sleep), 
 and high-frequency timers can be very accurate. It works well with CUDA which can suffer from massive overhead when the thread sleeps.
 
 ## Rapid Development
-This framework has no dependency other than standard C++ libraries. 
-Therefore, one can build the framework and create a multithreaded system quickly. 
-It provides a user-friendly way of "wiring" function calls across threads which have been the most time-consuming
+No dependency is needed other than standard C++ libraries. 
+One can build the framework and create a multithreaded system quickly. 
+It provides a convenient way of wiring function calls across threads which has been the most time-consuming
 part of developing a multithreaded system.
 
 # Tested Platforms
@@ -31,7 +31,7 @@ part of developing a multithreaded system.
 
 # Getting Started
 
-## The Main Thread
+## The Main Thread and Worker
 Event Thread uses thread & worker architecture which means you need to define a worker class
 that contains the process you want to run and move the worker to the main thread so that the worker can actually work.
 ```c++
@@ -72,39 +72,43 @@ using namespace ethr;
 class App : public EObject
 {
 public:
-    App();
-    ~App();
-    void progressReported(int progress);
+    App()
+    {
+        mTimerCount = 0;
+
+        mTimer.moveToThread(EThread::mainThread());
+        mTimer.addTask(0, std::chrono::milliseconds(500),
+                       this->ref<App>(), &App::timerCallback, 3);
+        mTimer.addTask(1, std::chrono::milliseconds(2000), this->uref(), [&]
+        {
+            std::cout<<"Terminating. Timer count:"<<mTimerCount<<std::endl;
+            EThread::stopMainThread();
+        }, 1);
+        mTimer.start();
+    }
+    ~App()
+    {
+        mTimer.stop();
+        mTimer.removeFromThread();
+    }
 private:
     ETimer mTimer;
+    int mTimerCount;
+    void timerCallback()
+    {
+        std::cout<<"Timer! Timer count:"<<mTimerCount++<<std::endl;
+    }
 };
-
-App::App()
-{
-    mTimer.moveToThread(EThread::mainThread());
-    mTimer.addTask(0, std::chrono::milliseconds(1000), [&]{
-        std::cout<<"mTimer callback"<<std::endl;
-    }, 3);
-    mTimer.addTask(1, std::chrono::milliseconds(4000), [&]{
-        EThread::stopMainThread();
-    }, 1);
-    mTimer.start();
-}
-
-App::~App()
-{
-    mTimer.removeFromThread();
-}
 ```
 `ETimer` is a thread worker that inherits from `EObject` so
 it has to be moved to a thread for it to work. In the example above the `App` class that has been used in `The Main Thread` example is shown.
 In that example, an instance of `App` is created and moved to the main thread. 
-In the `App` class, it has an `ETimer` `mTimer` as a member and moves it to the same main thread in the constructor.
+In the `App` class, it has `ETimer mTimer` as a member and moves it to the same main thread in the constructor.
 The constructor adds a task to the mTimer using `ETimer::addTask()` 
-which takes a unique task id, period, callback lambda that would be called every loop, and optional ttl(time to live) of the task.
-The first task of id 0 prints "mTimer callback" 3 times with an interval of 1000 milliseconds between.
-The second task of id 1 calls `EThread::stopMainThread()` which stops the main thread and finally terminates the program.
-`ETimer::start()` finally starts the mTimer to start executing the tasks.
+which takes a unique task id, period, target `EObject` reference, member function pointer of the `EObject` that would be called every loop, and optional ttl(time to live) of the task.
+The first task of id 0 calls the member function `timerCallback()` 3 times with an interval of 1000 milliseconds between the calls.
+The second task of id 1 uses a lambda instead of a function pointer and calls `EThread::stopMainThread()` which stops the main thread and terminates the program.
+`ETimer::start()` starts the mTimer to start executing the tasks.
 
 > The lambda passed as the `callback` parameter of `ETimer::addTask()` will run in the thread that the `ETimer` is moved to.
 > For thread safety, make sure to move the `EThread` to the same thread that the parent EObject(in this case `App`) is in.
@@ -130,7 +134,7 @@ class App : public EObject
 public:
     App();
     ~App();
-    void progressReported(int progress);
+    void progressReported(const int progress, const int total);
 private:
     ETimer mTimer;
     EThread mWorkerThread;
@@ -151,8 +155,10 @@ App::App()
     mWorkerThread.start();
 
     mTimer.moveToThread(EThread::mainThread());
-    mTimer.addTask(0, std::chrono::milliseconds(0), [&]{
-        mWorker.callQueued(&Worker::work);
+    mTimer.addTask(0, std::chrono::milliseconds(0), this->uref(), [&]
+    {
+        std::vector<int> numbers = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        mWorker.callQueuedMove(&Worker::work, std::move(numbers));
     }, 1);
     mTimer.start();
 }
@@ -164,18 +170,24 @@ App::~App()
     mTimer.removeFromThread();
 }
 
-void App::progressReported(int progress)
+void App::progressReported(const int progress, const int total)
 {
-    std::cout<<"progress: "<<progress<<"/99"<<std::endl;
-    if(progress == 99)
+    std::cout << "progress: " << progress << "/" << total << std::endl;
+    if(progress == total)
         EThread::stopMainThread();
 }
 ```
 Here's an updated version of the `App` class. It now has a new worker, `mWorker`, and a thread `mWorkerThread` that `mWorker` is moved to.
 `mWorker`is an instance of class `Worker` which will be explained later.
-With `ETimer::addTask()` a new task is added to the mTimer.
+With `ETimer::addTask()` a new task is added to `mTimer`.
 it will execute a public member function `Worker::work` of `mWorker` right after the mTimer start.
-This is implemented by calling `EObject::callQueued()` with the function pointer as its parameter.
+You can call member function of other `EObject` in other thread with `EObject::callQueued()` or `EObject::callQueuedMove()`.
+Both takes the member function pointer of the object and parameters.
+In this case, the function pointer is `&Worker::work` and the parameter is `std::move(number)`.
+For a member function that has multiple parameters, add the values you want to pass after the function pointer in order.
+The difference between `EObject::callQueued()` and `EObject::callQueuedMove()` is that 
+`EObject::callQueued()` copies the parameters into the event queue and `EObject::callQueuedMove()` moves the parameters using the move semantics.
+`EObject::callQueuedMove()` is useful when you have to pass large objects as parameters because there would be no expensive copy operations.
 
 `worker.h`
 ```c++
@@ -186,13 +198,13 @@ This is implemented by calling `EObject::callQueued()` with the function pointer
 
 using namespace ethr;
 
-class App; // forward declaration
+class App;
 
 class Worker : public EObject
 {
 public:
     void setAppRef(const EObjectRef<App>& appRef);
-    void work();
+    void work(std::vector<int> &&numbers);
 private:
     EObjectRef<App> mAppRef;
 };
@@ -209,27 +221,24 @@ void Worker::setAppRef(const EObjectRef<App> &appRef)
     mAppRef = appRef;
 }
 
-void Worker::work()
+void Worker::work(std::vector<int> &&numbers)
 {
-    for(int i=0; i<100; i++)
+    for(int i=-0; i<numbers.size(); i++)
     {
+        std::cout<<"worker is processing number "<<numbers[i]<<std::endl;
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
-        mAppRef.callQueued(&App::progressReported, i);
+        mAppRef.callQueued(&App::progressReported, i+1, (int)numbers.size());
     }
 }
 ```
 Here's the `Worker` class mentioned above. It's a thread worker that has the public member function `Worker::work()`, the very function that `app` called using `EObject::callQueued()`.
 `Worker::work()` performs a "time-consuming" operation which is just a combination of sleep and another `EObject::callQueued()` that calls one of `app`'s public functions `App::progressReported()`
-However, in this case, two things are different. 
-First, `callQueued()` is called with the reference of the `app`, `EObjectRef<App> mAppRef`. The reference is created and passed to the `mWorker` using the dependency injection function `void setAppRef()`.
+`callQueued()` is used with the reference of the `app`, `EObjectRef<App> mAppRef`. The reference is created and passed to the `mWorker` using the dependency injection function `void setAppRef()`.
 The reference can be acquired using `EObject::ref<EObjectType>()`.
-Second, `App::progressReported` has a parameter of type `int`. The function can be called with the parameter by using the variadic argument of `callQueued()`.
-Just add it after the function pointer.
-For a function that has multiple parameters, add the values you want to pass after the function pointer in order. 
 
 > For thread safety, use call-by-value for the functions you want to call inter-thread.
 > Pointers or references may allow multiple threads to access to the same memory simultaneously.
-> For large objects or pointer wrappers(e.g. OpenCV Mats) you NEED to use pointers or references, use move semantics so that only one `EObject` owns it at a time.
+> For large objects use `callQueuedMove()` along with the move semantics.
 
 > Rather than passing a raw pointer to other `EObject`s which is extremely unsafe due to the dangling pointers, it is highly recommended to pass a `EObjectRef` as a reference of it instead.
 > `EObjectRef` guarantees safe inter-thread operations even when the target `EObject` is removed from its thread for destruction.
@@ -278,22 +287,22 @@ public:
             threads[i].start();
         }
         mTimer.moveToThread(EThread::mainThread());
-        mTimer.addTask(0, std::chrono::milliseconds(0), [&]
+        mTimer.addTask(0, std::chrono::milliseconds(0), this->uref(), [&]
         {
             auto promise = new EPromise(workers[0].ref<Worker>(), &Worker::multiply);
             promise
-            ->then(workers[1].ref<Worker>(), &Worker::multiply)
-            ->then(workers[2].ref<Worker>(), &Worker::multiply)
-            ->then(workers[3].ref<Worker>(), &Worker::multiply)
-            ->then(workers[4].ref<Worker>(), &Worker::multiply)
-            ->then(workers[5].ref<Worker>(), &Worker::multiply)
-            ->then(workers[6].ref<Worker>(), &Worker::multiply)
-            ->then(workers[7].ref<Worker>(), &Worker::multiply)
-            ->then(workers[8].ref<Worker>(), &Worker::multiply)
-            ->then(workers[9].ref<Worker>(), &Worker::multiply);
+                    ->then(workers[1].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[2].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[3].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[4].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[5].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[6].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[7].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[8].ref<Worker>(), &Worker::multiply)
+                    ->then(workers[9].ref<Worker>(), &Worker::multiply);
             promise->execute(2);
         }, 1);
-        mTimer.addTask(1, std::chrono::milliseconds(6000), []
+        mTimer.addTask(1, std::chrono::milliseconds(6000), this->uref(), []
         {
             EThread::stopMainThread();
         }, 1);
