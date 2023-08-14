@@ -110,9 +110,6 @@ The first task of id 0 calls the member function `timerCallback()` 3 times with 
 The second task of id 1 uses a lambda instead of a function pointer and calls `EThread::stopMainThread()` which stops the main thread and terminates the program.
 `ETimer::start()` starts the mTimer to start executing the tasks.
 
-> The lambda passed as the `callback` parameter of `ETimer::addTask()` will run in the thread that the `ETimer` is moved to.
-> For thread safety, make sure to move the `EThread` to the same thread that the parent EObject(in this case `App`) is in.
-
 > Note that in the destructor, `mTimer` is removed from the thread for a proper `EThread` destruction. 
 
 ## Inter-thread Communications
