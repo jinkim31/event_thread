@@ -139,7 +139,9 @@ public:
 
     template<typename EObjectType>
     EPromiseMove(EObjectRef<EObjectType> eObjectRef, PromiseType(EObjectType::*funcPtr)(ParamTypes&&...))
-            : EPromiseMove(eObjectRef, [=](ParamTypes&&... params){return ((*(eObjectRef.eObjectUnsafePtr())).*funcPtr)(std::move(params...));}){}
+            : EPromiseMove(eObjectRef, [=](ParamTypes&&... params){
+                return ((*(eObjectRef.eObjectUnsafePtr())).*funcPtr)(std::move(params...));
+            }){}
 
     void selfDestructChain()
     {
