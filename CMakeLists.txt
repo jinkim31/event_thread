@@ -28,5 +28,8 @@ target_link_libraries(test_call_queued_move PRIVATE event_thread)
 add_executable(test_promise test/promise/main.cpp)
 target_link_libraries(test_promise PRIVATE event_thread)
 
+add_executable(test_promise_move test/promise_move/main.cpp)
+target_link_libraries(test_promise_move PRIVATE event_thread)
+
 add_executable(test_etimer test/etimer/main.cpp)
 target_link_libraries(test_etimer PRIVATE event_thread)
