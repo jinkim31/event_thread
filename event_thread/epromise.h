@@ -123,6 +123,14 @@ private:
     EDeletable *mThenPromisePtr;
 };
 
+
+
+
+
+
+
+
+
 template<typename PromiseType, typename... ParamTypes>
 class EPromiseMove : public EDeletable
 {
@@ -130,7 +138,7 @@ public:
     EPromiseMove(UntypedEObjectRef eObjectRef, const std::function<PromiseType(ParamTypes&&...)> functor)
     {
         if(!eObjectRef.isInitialized())
-            throw std::runtime_error("[EThread] EPromise is created using empty EObject reference.");
+            throw std::runtime_error("[EThread] EPromiseMove is created using empty EObject reference.");
         mTargetEObjectRef = eObjectRef;
         mExecuteFunctor = functor;
         mThenPromisePtr = nullptr;
@@ -148,7 +156,6 @@ public:
         // TODO: destruct promises after exception catch
         delete this;
     }
-
     void execute(ParamTypes&&... params)
     {
         if (!mInitialized)
@@ -168,7 +175,7 @@ public:
                 if (!mCatchEObjectRef.isInitialized())
                     throw ExceptionNotCaughtException(
                             "[EThread] Detected uncaught exception: \"" + std::string(e.what())
-                            + "\". Use EPromise::cat() to catch the exception.");
+                            + "\". Use EPromiseMove::cat() to catch the exception.");
 
                 std::exception_ptr eptr = std::current_exception();
                 mCatchEObjectRef.runQueued([&]{
@@ -213,7 +220,7 @@ public:
     template<typename ThenPromiseType>
     EPromiseMove<ThenPromiseType, PromiseType>* then(
             UntypedEObjectRef eObjectRef,
-            const std::function<ThenPromiseType&&(PromiseType&&)>& functor)
+            const std::function<ThenPromiseType(PromiseType&&)>& functor)
     {
         auto thenPromise = new EPromiseMove<ThenPromiseType, PromiseType>(eObjectRef, functor);
         mExecuteThenFunctor = [=](PromiseType&& output){ thenPromise->execute(std::move(output)); };
@@ -225,7 +232,7 @@ private:
     bool mInitialized;
     UntypedEObjectRef mTargetEObjectRef;
     std::function<void(PromiseType&&)> mExecuteThenFunctor;
-    std::function<PromiseType&&(ParamTypes&&...)> mExecuteFunctor;
+    std::function<PromiseType(ParamTypes&&...)> mExecuteFunctor;
     UntypedEObjectRef mCatchEObjectRef;
     std::function<void(std::exception_ptr)> mCatchFunctor;
     EDeletable *mThenPromisePtr;

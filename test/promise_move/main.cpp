@@ -19,12 +19,12 @@ private:
 class Worker : public EObject
 {
 public:
-    PassTester&& echo(PassTester&& tester)
+    PassTester echo(PassTester&& tester)
     {
         std::cout<<"echo"<<std::endl;
         return std::move(tester);
     }
-    PassTester&& echo2(PassTester&& tester)
+    PassTester echo2(PassTester&& tester)
     {
         std::cout<<"echo2"<<std::endl;
         return std::move(tester);
