@@ -22,7 +22,8 @@ public:
         int mNum;
     };
 
-    void test(PassTester &&passTester);
+    void test2(PassTester &&passTester1, PassTester &&passTester2);
+    void test1(PassTester &&passTester1);
 };
 
 #endif

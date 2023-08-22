@@ -155,12 +155,12 @@ public:
         if (mThreadInAffinity == nullptr)
             throw std::runtime_error("EObject::callQueued() is called but no EThread is assigned to it.");
         //mThreadInAffinity->queueNewEvent(mId, std::bind(funcPtr, (ObjType *) this,std::move(args...)));
-        auto func = [=, this, args = std::move(args...)]()mutable{(((ObjType*)this)->*funcPtr)(std::move(args));};
+        auto func = [=, this, ... args = std::move(args)]()mutable{(((ObjType*)this)->*funcPtr)(std::move(args)...);};
         mThreadInAffinity->queueNewEvent(mId, std::move(func));
     }
 
-
-    // no args version
+    // no args version !!USE REGULAR callQueued() INSTEAD!!
+    /*
     template<typename RetType, typename ObjType>
     void callQueuedMove(RetType (ObjType::*funcPtr)())
     {
@@ -170,6 +170,7 @@ public:
         auto func = [=, this]()mutable{(((ObjType*)this)->*funcPtr)();};
         mThreadInAffinity->queueNewEvent(mId, std::move(func));
     }
+     */
 
     void runQueued(std::function<void(void)> &&functor)
     {
