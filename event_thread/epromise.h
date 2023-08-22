@@ -123,14 +123,6 @@ private:
     EDeletable *mThenPromisePtr;
 };
 
-
-
-
-
-
-
-
-
 template<typename PromiseType, typename... ParamTypes>
 class EPromiseMove : public EDeletable
 {
@@ -148,7 +140,7 @@ public:
     template<typename EObjectType>
     EPromiseMove(EObjectRef<EObjectType> eObjectRef, PromiseType(EObjectType::*funcPtr)(ParamTypes&&...))
             : EPromiseMove(eObjectRef, [=](ParamTypes&&... params){
-                return ((*(eObjectRef.eObjectUnsafePtr())).*funcPtr)(std::move(params...));
+                return ((*(eObjectRef.eObjectUnsafePtr())).*funcPtr)(std::move(params)...);
             }){}
 
     void selfDestructChain()
@@ -161,14 +153,14 @@ public:
         if (!mInitialized)
             return;
 
-        mTargetEObjectRef.runQueued([&, params = std::move(params...)]() mutable
+        mTargetEObjectRef.runQueued([&, ... params = std::move(params)]() mutable
         {
             try
             {
                 if (mThenPromisePtr)
-                    mExecuteThenFunctor(std::move(mExecuteFunctor(std::move(params))));
+                    mExecuteThenFunctor(std::move(mExecuteFunctor(std::move(params)...)));
                 else
-                    mExecuteFunctor(std::move(params));
+                    mExecuteFunctor(std::move(params)...);
             }
             catch (const std::exception& e)
             {
