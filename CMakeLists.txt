@@ -33,3 +33,6 @@ target_link_libraries(test_promise_move PRIVATE event_thread)
 
 add_executable(test_etimer test/etimer/main.cpp)
 target_link_libraries(test_etimer PRIVATE event_thread)
+
+add_executable(test_itc_stress test/test_itc_stress.cpp)
+target_link_libraries(test_itc_stress PRIVATE event_thread)

@@ -11,8 +11,8 @@ public:
         mTimerCount = 0;
 
         mTimer.moveToThread(EThread::mainThread());
-        mTimer.addTask(0, std::chrono::milliseconds(500),
-                       this->ref<App>(), &App::timerCallback, 3);
+        mTimer.addTask(0, std::chrono::milliseconds(500),this->ref<App>(),
+                &App::timerCallback, 3);
         mTimer.addTask(1, std::chrono::milliseconds(2000), this->uref(), [&]
         {
             std::cout<<"Terminating. Timer count:"<<mTimerCount<<std::endl;

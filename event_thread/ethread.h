@@ -101,7 +101,11 @@ private:
     std::thread mThread;
     bool mIsMain;
     std::string mName;
-    std::mutex mMutexLoop, mMutexEventQueue, mMutexEventHandling, mMutexChildObjects;
+    std::mutex
+        mMutexLoop,             // loop start, stop control
+        mMutexEventQueue,       // event queue
+        mMutexEventHandling,    // locked on event queue handling
+        mMutexChildObjects;     // child object list
     std::deque<std::pair<int, std::function<void(void)>>> mEventQueue;
     size_t mEventQueueSize;
     std::chrono::high_resolution_clock::duration mLoopPeriod;
@@ -192,6 +196,7 @@ public:
                     ("[EThread] In EObject::ref(). Cannot create EObjectRef of type <" + std::string(typeid(T*).name()) + ">."));
         return EObjectRef<T>(mId, dynamic_cast<T*>(this));
     }
+    int id(){return mId;}
 protected:
     EThread & threadInAffinity();
     virtual void onMovedToThread(EThread& ethread){};

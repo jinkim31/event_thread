@@ -147,10 +147,12 @@ void *ethr::EThread::threadEntryPoint(void *param)
 
 void ethr::EThread::handleQueuedEvents()
 {
-    // lock mMutexEventHandling to prohibit event deletion when chile EObject::removeFromThread()
+    // lock mMutexEventHandling to prohibit event deletion when child EObject::removeFromThread()
+    std::unique_lock<std::mutex> executionLock(mMutexEventHandling, std::defer_lock);
     if(mNEventQueueReservedForHandle == 0)
-        // mNEventQueueReservedForHandle == 0 means its the first call in the recursion
-        std::unique_lock<std::mutex> executionLock(mMutexEventHandling);
+    {
+        executionLock.lock();
+    }
 
 
     size_t nQueuedEvent = mEventQueue.size();
@@ -162,6 +164,9 @@ void ethr::EThread::handleQueuedEvents()
     {
         // lock mMutexEventQueue to access event queue
         std::unique_lock<std::mutex> eventLock(mMutexEventQueue);
+
+        if(!(mEventQueue[iHandleStartEvent + i].second))
+            std::cerr<<"empty function detected in queue"<<std::endl;
         auto func = std::move(mEventQueue[iHandleStartEvent + i].second);
 
         // unlocking mMutexEventQueue allows event push between event executions
@@ -233,7 +238,7 @@ void ethr::EThread::addChildEObject(ethr::EObject *eObjectPtr)
 void ethr::EThread::removeChildEObject(EObject* eObjectPtr)
 {
     std::unique_lock<std::mutex> childObjectsLock(mMutexChildObjects);
-    std::unique_lock<std::mutex> executionLock(mMutexEventHandling);
+    std::unique_lock<std::mutex> executionLock(mMutexEventHandling, std::defer_lock);
     std::unique_lock<std::mutex> eventLock(mMutexEventQueue);
     std::unique_lock<std::shared_mutex> activeEObjectsLock(EObject::mutexActiveEObjectIds);
 
