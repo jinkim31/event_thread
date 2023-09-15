@@ -37,9 +37,9 @@ ethr::EObject::~EObject()
         std::cerr<<"[EThread] EObject must be removed from thread in affinity before destruction."<<std::endl;
 }
 
-ethr::EThread & ethr::EObject::threadInAffinity()
+ethr::EThread * ethr::EObject::threadInAffinity()
 {
-    return *mThreadInAffinity;
+    return mThreadInAffinity;
 }
 
 ethr::UntypedEObjectRef ethr::EObject::uref()

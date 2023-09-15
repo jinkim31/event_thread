@@ -163,7 +163,8 @@ public:
         mThreadInAffinity->queueNewEvent(mId, std::move(func));
     }
 
-    // no args version !!USE REGULAR callQueued() INSTEAD!!
+    // no args version
+    // !!USE REGULAR callQueued() INSTEAD!!
     /*
     template<typename RetType, typename ObjType>
     void callQueuedMove(RetType (ObjType::*funcPtr)())
@@ -198,7 +199,7 @@ public:
     }
     int id(){return mId;}
 protected:
-    EThread & threadInAffinity();
+    EThread * threadInAffinity();
     virtual void onMovedToThread(EThread& ethread){};
     virtual void onRemovedFromThread(){};
 private:
@@ -254,6 +255,13 @@ class EObjectRef : public UntypedEObjectRef
 {
 public:
     EObjectRef()=default;
+    EObjectRef(int eObjectId, EObjectType* eObjectPtr)
+    {
+        mEObjectId = eObjectId;
+        mUntypedEObjectUnsafePtr = eObjectPtr;
+        mEObjectUnsafePtr = (EObjectType*)eObjectPtr;
+        mInitialized = true;
+    }
 
     template<typename RetType, class... Args>
     bool callQueued(RetType (EObjectType::*funcPtr)(Args...), Args... args)
@@ -295,16 +303,17 @@ public:
         return true;
     }
 
+    template<typename T>
+    EObjectRef<T> cast()
+    {
+        T* castedEObjectPtr = dynamic_cast<T*>(mEObjectUnsafePtr);
+        if(castedEObjectPtr == nullptr)
+            throw std::runtime_error("[EThread] EObjectRef cast failed. Invalid cast.");
+        EObjectRef<T> ref(mEObjectId, castedEObjectPtr);
+        return ref;
+    }
     EObjectType * eObjectUnsafePtr() const {return mEObjectUnsafePtr;}
 private:
-    // private constructor so user can't create ref.
-    EObjectRef(int eObjectId, EObjectType* eObjectPtr)
-    {
-        mEObjectId = eObjectId;
-        mUntypedEObjectUnsafePtr = eObjectPtr;
-        mEObjectUnsafePtr = (EObjectType*)eObjectPtr;
-        mInitialized = true;
-    }
 
     EObjectType* mEObjectUnsafePtr;
     friend EObject;
